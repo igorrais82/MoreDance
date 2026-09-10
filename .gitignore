@@ -40,3 +40,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# local screenshots
+emulator-*.png
+emulator-*.jpg
+emulator-ui*.png
+emulator-ui*.jpg
