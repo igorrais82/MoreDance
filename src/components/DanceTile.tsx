@@ -22,7 +22,7 @@ export function DanceTile({ dance, progress }: Props) {
     <Link href={`/dance/${dance.id}`} asChild>
       <Pressable style={({ pressed }) => [styles.press, pressed && styles.pressed]}>
         <LinearGradient
-          colors={[`${dance.accent}33`, 'rgba(18,35,58,0.95)']}
+          colors={[`${dance.accent}33`, colors.panel]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.tile}
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(244,247,251,0.12)',
+    backgroundColor: colors.track,
     overflow: 'hidden',
     marginBottom: 8,
   },

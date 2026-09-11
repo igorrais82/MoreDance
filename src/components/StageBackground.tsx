@@ -13,21 +13,29 @@ export function StageBackground({ children, style }: Props) {
   return (
     <View style={[styles.root, style]}>
       <LinearGradient
-        colors={['#122E4A', '#0A1628', '#07101C']}
-        locations={[0, 0.45, 1]}
+        colors={['#0A3D4A', '#1A0B3A', '#2B0B4A']}
+        locations={[0, 0.48, 1]}
+        start={{ x: 0.05, y: 0.15 }}
+        end={{ x: 0.95, y: 0.95 }}
         style={StyleSheet.absoluteFill}
       />
       <LinearGradient
-        colors={['rgba(240,180,41,0.18)', 'transparent']}
-        start={{ x: 0.15, y: 0 }}
-        end={{ x: 0.85, y: 0.55 }}
-        style={styles.spotlight}
+        colors={['rgba(0,245,255,0.28)', 'transparent']}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 0.55 }}
+        style={styles.spotlightCyan}
       />
       <LinearGradient
-        colors={['transparent', 'rgba(77,183,255,0.12)']}
-        start={{ x: 1, y: 0.2 }}
-        end={{ x: 0.2, y: 1 }}
+        colors={['transparent', 'rgba(212,0,255,0.28)']}
+        start={{ x: 0.1, y: 0.2 }}
+        end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
+      />
+      <LinearGradient
+        colors={['rgba(255,216,74,0.12)', 'transparent']}
+        start={{ x: 0.5, y: 1 }}
+        end={{ x: 0.5, y: 0.55 }}
+        style={styles.goldLift}
       />
       <View style={styles.floorLines} pointerEvents="none">
         {Array.from({ length: 8 }).map((_, i) => (
@@ -44,22 +52,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  spotlight: {
+  spotlightCyan: {
     position: 'absolute',
-    top: -40,
-    left: -20,
-    right: -20,
-    height: 280,
+    top: -60,
+    left: -40,
+    right: -40,
+    height: 320,
+  },
+  goldLift: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 220,
   },
   floorLines: {
     ...StyleSheet.absoluteFill,
-    opacity: 0.08,
+    opacity: 0.07,
   },
   floorLine: {
     position: 'absolute',
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.cyan,
   },
 });

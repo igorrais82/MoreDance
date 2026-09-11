@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandLogo } from '../../src/components/BrandLogo';
 import { DanceTile } from '../../src/components/DanceTile';
 import { StageBackground } from '../../src/components/StageBackground';
 import { useProgress } from '../../src/context/ProgressContext';
@@ -24,7 +25,7 @@ export default function DancesScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.brand}>MoreDance</Text>
+        <BrandLogo size={72} style={styles.logo} />
         <Text style={styles.title}>Каталог танцев</Text>
         <Text style={styles.copy}>
           Выбери танец, открой урок и потренируй фигуры под счёт.
@@ -57,11 +58,11 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
   },
-  brand: {
-    fontFamily: fonts.brand,
-    fontSize: 36,
-    color: colors.gold,
-    letterSpacing: 1,
+  logo: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,245,255,0.4)',
   },
   title: {
     fontFamily: fonts.bodyExtra,

@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   brand: {
     fontFamily: fonts.brand,
     fontSize: 34,
-    color: colors.gold,
+    color: colors.cyan,
   },
   title: {
     fontFamily: fonts.bodyExtra,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   panel: {
-    backgroundColor: 'rgba(18,35,58,0.92)',
+    backgroundColor: colors.panel,
     borderRadius: 18,
     padding: spacing.lg,
     borderWidth: 1,
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(244,247,251,0.12)',
+    backgroundColor: colors.track,
     marginTop: spacing.md,
     overflow: 'hidden',
   },
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 56,
     borderRadius: 14,
-    backgroundColor: 'rgba(18,35,58,0.95)',
+    backgroundColor: colors.panel,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,

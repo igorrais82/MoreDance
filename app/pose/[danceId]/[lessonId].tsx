@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     justifyContent: 'space-between',
     paddingBottom: spacing.lg,
-    backgroundColor: 'rgba(10,22,40,0.28)',
+    backgroundColor: 'rgba(20,8,42,0.28)',
   },
   back: {
     fontFamily: fonts.bodyBold,
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 8,
     top: 12,
-    backgroundColor: 'rgba(10,22,40,0.82)',
+    backgroundColor: 'rgba(20,8,42,0.82)',
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   card: {
-    backgroundColor: 'rgba(10,22,40,0.92)',
+    backgroundColor: colors.panel,
     borderRadius: 22,
     padding: spacing.lg,
     borderWidth: 1,

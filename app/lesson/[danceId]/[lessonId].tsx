@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: spacing.md,
     marginBottom: spacing.lg,
-    backgroundColor: 'rgba(18,35,58,0.85)',
+    backgroundColor: colors.panel,
   },
   tipLabel: {
     fontFamily: fonts.bodyExtra,
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   },
   secondaryDone: {
     borderColor: colors.mint,
-    backgroundColor: 'rgba(62,207,142,0.12)',
+    backgroundColor: 'rgba(46,230,197,0.12)',
   },
   secondaryText: {
     fontFamily: fonts.bodyBold,

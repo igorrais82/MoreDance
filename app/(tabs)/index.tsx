@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandLogo } from '../../src/components/BrandLogo';
 import { StageBackground } from '../../src/components/StageBackground';
 import { useProgress } from '../../src/context/ProgressContext';
 import { dances } from '../../src/data/dances';
@@ -75,7 +76,7 @@ export default function HomeScreen() {
         >
           <View style={styles.hero}>
             <Animated.View style={[styles.heroGlow, { opacity: spotlightOpacity }]} />
-            <Text style={styles.brand}>MoreDance</Text>
+            <BrandLogo size={248} style={styles.logo} />
             <Text style={styles.headline}>Спортивные бальные — шаг за шагом</Text>
             <Text style={styles.sub}>
               Привет, {dancerName}! Уровень {level} · {stars} ★
@@ -112,7 +113,7 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Следующий шаг</Text>
             <LinearGradient
-              colors={['rgba(240,180,41,0.22)', 'rgba(18,35,58,0.95)']}
+              colors={['rgba(0,245,255,0.22)', 'rgba(212,0,255,0.18)', 'rgba(28,16,64,0.95)']}
               style={styles.nextCard}
             >
               <Text style={styles.nextDance}>{nextLesson.danceName}</Text>
@@ -156,33 +157,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   hero: {
-    minHeight: 340,
+    minHeight: 420,
     justifyContent: 'flex-end',
     paddingBottom: spacing.xl,
     marginBottom: spacing.lg,
+    alignItems: 'center',
   },
   heroGlow: {
     position: 'absolute',
-    top: 20,
-    left: '10%',
-    width: '80%',
-    height: 180,
-    borderRadius: 120,
-    backgroundColor: colors.gold,
+    top: 10,
+    left: '8%',
+    width: '84%',
+    height: 260,
+    borderRadius: 140,
+    backgroundColor: colors.magenta,
   },
-  brand: {
-    fontFamily: fonts.brand,
-    fontSize: 72,
-    lineHeight: 74,
-    color: colors.ink,
-    letterSpacing: 1.5,
+  logo: {
+    marginBottom: spacing.md,
+    borderWidth: 2,
+    borderColor: 'rgba(0,245,255,0.45)',
   },
   headline: {
     fontFamily: fonts.bodyBold,
     fontSize: 20,
     color: colors.ink,
     marginTop: spacing.sm,
-    maxWidth: 300,
+    maxWidth: 320,
+    textAlign: 'center',
   },
   sub: {
     fontFamily: fonts.body,
@@ -190,11 +191,13 @@ const styles = StyleSheet.create({
     color: colors.muted,
     marginTop: spacing.sm,
     marginBottom: spacing.lg,
+    textAlign: 'center',
   },
   ctaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+    justifyContent: 'center',
   },
   cta: {
     backgroundColor: colors.gold,
@@ -272,7 +275,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: 'rgba(18,35,58,0.7)',
+    backgroundColor: colors.panelSoft,
   },
   chipText: {
     fontFamily: fonts.bodyBold,

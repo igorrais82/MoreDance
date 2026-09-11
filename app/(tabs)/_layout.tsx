@@ -18,7 +18,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: colors.gold,
+        tabBarActiveTintColor: colors.cyan,
         tabBarInactiveTintColor: colors.muted,
         tabBarLabelStyle: styles.label,
       }}
@@ -57,7 +57,7 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#0D1B2E',
+    backgroundColor: '#160A32',
     borderTopColor: colors.line,
     borderTopWidth: 1,
     height: 64,
@@ -77,6 +77,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
   },
   iconFocused: {
-    color: colors.gold,
+    color: colors.cyan,
   },
 });

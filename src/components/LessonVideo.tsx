@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: 18,
     padding: spacing.md,
-    backgroundColor: 'rgba(18,35,58,0.95)',
+    backgroundColor: colors.panel,
     marginBottom: spacing.md,
   },
   play: {
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
-    backgroundColor: 'rgba(18,35,58,0.98)',
+    backgroundColor: colors.panel,
   },
   label: {
     fontFamily: fonts.bodyExtra,

@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
   },
   cue: {
     flex: 1,
-    backgroundColor: 'rgba(18,35,58,0.9)',
+    backgroundColor: colors.panel,
     borderRadius: 22,
     padding: spacing.lg,
     borderWidth: 1,

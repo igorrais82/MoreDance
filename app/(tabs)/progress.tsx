@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BrandLogo } from '../../src/components/BrandLogo';
 import { StageBackground } from '../../src/components/StageBackground';
 import { useProgress } from '../../src/context/ProgressContext';
 import { dances } from '../../src/data/dances';
@@ -51,7 +52,7 @@ export default function ProgressScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.brand}>MoreDance</Text>
+        <BrandLogo size={72} style={styles.logo} />
         <Text style={styles.title}>Твой прогресс</Text>
 
         <View style={styles.stats}>
@@ -153,10 +154,11 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
   },
-  brand: {
-    fontFamily: fonts.brand,
-    fontSize: 36,
-    color: colors.gold,
+  logo: {
+    alignSelf: 'flex-start',
+    marginBottom: 8,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,245,255,0.4)',
   },
   title: {
     fontFamily: fonts.bodyExtra,
@@ -171,7 +173,7 @@ const styles = StyleSheet.create({
   },
   stat: {
     flex: 1,
-    backgroundColor: 'rgba(18,35,58,0.9)',
+    backgroundColor: colors.panel,
     borderRadius: 18,
     paddingVertical: spacing.md,
     alignItems: 'center',
@@ -189,7 +191,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   panel: {
-    backgroundColor: 'rgba(18,35,58,0.9)',
+    backgroundColor: colors.panel,
     borderRadius: 20,
     padding: spacing.lg,
     borderWidth: 1,
@@ -241,7 +243,7 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(244,247,251,0.12)',
+    backgroundColor: colors.track,
     marginTop: spacing.md,
     overflow: 'hidden',
   },

@@ -98,7 +98,7 @@ export default function DanceDetailScreen() {
                 ]}
               >
                 <LinearGradient
-                  colors={['rgba(18,35,58,0.95)', `${dance.accent}22`]}
+                  colors={[colors.panel, `${dance.accent}22`]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.lessonInner}
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(244,247,251,0.12)',
+    backgroundColor: colors.track,
     overflow: 'hidden',
   },
   barFill: {

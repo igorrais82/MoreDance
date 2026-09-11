@@ -83,7 +83,7 @@ export function Metronome({
               styles.beatDot,
               {
                 backgroundColor:
-                  running && i === beat ? accent : 'rgba(244,247,251,0.18)',
+                  running && i === beat ? accent : colors.track,
               },
             ]}
           />
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(18, 35, 58, 0.9)',
+    backgroundColor: colors.panel,
     shadowOpacity: 0.45,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 8 },
