@@ -3,6 +3,7 @@ import { Link } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -14,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BrandLogo } from '../../src/components/BrandLogo';
 import { StageBackground } from '../../src/components/StageBackground';
 import { useProgress } from '../../src/context/ProgressContext';
+import { getDanceImage } from '../../src/data/danceImages';
 import { dances } from '../../src/data/dances';
 import { colors, fonts, spacing } from '../../src/theme';
 
@@ -87,22 +89,47 @@ export default function HomeScreen() {
                   href={`/lesson/${nextLesson.danceId}/${nextLesson.lessonId}`}
                   asChild
                 >
-                  <Pressable style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
-                    <Text style={styles.ctaText}>Продолжить урок</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.ctaPress, pressed && styles.pressed]}
+                  >
+                    <LinearGradient
+                      colors={[colors.cyan, colors.magenta]}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={styles.ctaButton}
+                    >
+                      <Text style={styles.ctaText}>Продолжить урок</Text>
+                    </LinearGradient>
                   </Pressable>
                 </Link>
               ) : (
                 <Link href="/dances" asChild>
-                  <Pressable style={({ pressed }) => [styles.cta, pressed && styles.pressed]}>
-                    <Text style={styles.ctaText}>Все танцы пройдены!</Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.ctaPress, pressed && styles.pressed]}
+                  >
+                    <LinearGradient
+                      colors={[colors.cyan, colors.magenta]}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={styles.ctaButton}
+                    >
+                      <Text style={styles.ctaText}>Все танцы пройдены!</Text>
+                    </LinearGradient>
                   </Pressable>
                 </Link>
               )}
               <Link href="/dances" asChild>
                 <Pressable
-                  style={({ pressed }) => [styles.ctaGhost, pressed && styles.pressed]}
+                  style={({ pressed }) => [styles.ctaPress, pressed && styles.pressed]}
                 >
-                  <Text style={styles.ctaGhostText}>Каталог</Text>
+                  <LinearGradient
+                    colors={[colors.cyan, colors.magenta]}
+                    start={{ x: 0, y: 0.5 }}
+                    end={{ x: 1, y: 0.5 }}
+                    style={styles.ctaButton}
+                  >
+                    <Text style={styles.ctaText}>Каталог</Text>
+                  </LinearGradient>
                 </Pressable>
               </Link>
             </View>
@@ -132,19 +159,36 @@ export default function HomeScreen() {
             Пять танцев · стандарт и латина · счёт, фигуры и практика под метроном.
           </Text>
           <View style={styles.chips}>
-            {dances.map((d) => (
-              <Link key={d.id} href={`/dance/${d.id}`} asChild>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.chip,
-                    { borderColor: d.accent },
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Text style={[styles.chipText, { color: d.accent }]}>{d.nameEn}</Text>
-                </Pressable>
-              </Link>
-            ))}
+            {dances.map((d) => {
+              const image = getDanceImage(d.id);
+              return (
+                <Link key={d.id} href={`/dance/${d.id}`} asChild>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.chip,
+                      { borderColor: d.accent },
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <View style={[styles.chipImageWrap, { borderColor: d.accent }]}>
+                      {image ? (
+                        <Image
+                          source={image}
+                          style={styles.chipImage}
+                          resizeMode="cover"
+                        />
+                      ) : null}
+                    </View>
+                    <Text
+                      style={[styles.chipText, { color: d.accent }]}
+                      numberOfLines={1}
+                    >
+                      {d.nameEn}
+                    </Text>
+                  </Pressable>
+                </Link>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
@@ -194,36 +238,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   ctaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'center',
+    width: '100%',
+    maxWidth: 340,
+    gap: 12,
+    alignItems: 'stretch',
   },
-  cta: {
-    backgroundColor: colors.gold,
-    paddingHorizontal: 22,
+  ctaPress: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: colors.magenta,
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  ctaButton: {
+    minHeight: 54,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
     paddingVertical: 14,
-    borderRadius: 16,
   },
   ctaText: {
     fontFamily: fonts.bodyExtra,
-    color: colors.bg,
-    fontSize: 16,
-  },
-  ctaGhost: {
-    borderWidth: 1.5,
-    borderColor: colors.ink,
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-    borderRadius: 16,
-  },
-  ctaGhostText: {
-    fontFamily: fonts.bodyBold,
     color: colors.ink,
-    fontSize: 16,
+    fontSize: 17,
+    letterSpacing: 0.3,
   },
   pressed: {
     opacity: 0.88,
+    transform: [{ scale: 0.98 }],
   },
   section: {
     marginBottom: spacing.xl,
@@ -268,17 +313,38 @@ const styles = StyleSheet.create({
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'center',
+    gap: 12,
   },
   chip: {
+    width: 104,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1.5,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingTop: 10,
+    paddingBottom: 12,
     backgroundColor: colors.panelSoft,
+    gap: 8,
+  },
+  chipImageWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20,8,42,0.55)',
+  },
+  chipImage: {
+    width: 64,
+    height: 64,
   },
   chipText: {
     fontFamily: fonts.bodyBold,
-    fontSize: 13,
+    fontSize: 12,
+    textAlign: 'center',
   },
 });

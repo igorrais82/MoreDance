@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
@@ -89,30 +90,38 @@ export default function LessonScreen() {
         <View style={styles.actions}>
           <Link href={`/practice/${dance.id}/${lesson.id}`} asChild>
             <Pressable
-              style={({ pressed }) => [
-                styles.primary,
-                { backgroundColor: dance.accent },
-                pressed && { opacity: 0.88 },
-              ]}
+              style={({ pressed }) => [styles.actionPress, pressed && styles.pressed]}
             >
-              <Text style={styles.primaryText}>Практика со счётом</Text>
+              <LinearGradient
+                colors={[colors.cyan, '#3D8BFF']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={[styles.actionButton, { borderColor: colors.cyan }]}
+              >
+                <Text style={styles.actionTitle}>Практика со счётом</Text>
+                <Text style={styles.actionHint}>Метроном и шаги урока</Text>
+              </LinearGradient>
             </Pressable>
           </Link>
 
           <Link href={`/pose/${dance.id}/${lesson.id}`} asChild>
             <Pressable
-              style={({ pressed }) => [
-                styles.primary,
-                { backgroundColor: colors.coral },
-                pressed && { opacity: 0.88 },
-              ]}
+              style={({ pressed }) => [styles.actionPress, pressed && styles.pressed]}
             >
-              <Text style={styles.primaryText}>
-                Камера и оценка поз
-                {poseBestScores[lesson.id]
-                  ? ` · лучший ${poseBestScores[lesson.id]}%`
-                  : ''}
-              </Text>
+              <LinearGradient
+                colors={[colors.magenta, colors.coral]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={[styles.actionButton, { borderColor: colors.magenta }]}
+              >
+                <Text style={styles.actionTitle}>
+                  Камера и оценка поз
+                  {poseBestScores[lesson.id]
+                    ? ` · ${poseBestScores[lesson.id]}%`
+                    : ''}
+                </Text>
+                <Text style={styles.actionHint}>Зеркало и тренировка позы</Text>
+              </LinearGradient>
             </Pressable>
           </Link>
 
@@ -123,7 +132,7 @@ export default function LessonScreen() {
             style={({ pressed }) => [
               styles.secondary,
               done && styles.secondaryDone,
-              pressed && { opacity: 0.88 },
+              pressed && styles.pressed,
             ]}
           >
             <Text style={styles.secondaryText}>
@@ -225,17 +234,42 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: spacing.md,
-    gap: 10,
+    gap: 12,
   },
-  primary: {
-    borderRadius: 16,
-    paddingVertical: 16,
+  actionPress: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    shadowColor: colors.cyan,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 7,
+  },
+  actionButton: {
+    minHeight: 64,
+    borderRadius: 18,
+    borderWidth: 2,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  primaryText: {
+  actionTitle: {
     fontFamily: fonts.bodyExtra,
-    color: colors.bg,
-    fontSize: 16,
+    color: colors.ink,
+    fontSize: 17,
+    textAlign: 'center',
+  },
+  actionHint: {
+    fontFamily: fonts.body,
+    color: 'rgba(247,251,255,0.85)',
+    fontSize: 13,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  pressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
   },
   secondary: {
     borderRadius: 16,
@@ -243,6 +277,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: colors.line,
+    backgroundColor: colors.panel,
   },
   secondaryDone: {
     borderColor: colors.mint,

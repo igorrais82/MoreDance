@@ -8,7 +8,7 @@
     "scheme": "moredance",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/logo.jpg",
+      "image": "./assets/icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#14082A"
     },

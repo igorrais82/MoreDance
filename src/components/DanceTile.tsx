@@ -1,8 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { getDanceImage } from '../data/danceImages';
 import {
   Dance,
   difficultyLabel,
@@ -17,6 +18,7 @@ type Props = {
 
 export function DanceTile({ dance, progress }: Props) {
   const ratio = progress.total ? progress.done / progress.total : 0;
+  const image = getDanceImage(dance.id);
 
   return (
     <Link href={`/dance/${dance.id}`} asChild>
@@ -27,19 +29,27 @@ export function DanceTile({ dance, progress }: Props) {
           end={{ x: 1, y: 1 }}
           style={styles.tile}
         >
-          <View style={styles.topRow}>
-            <Text style={[styles.en, { color: dance.accent }]}>{dance.nameEn}</Text>
-            <Text style={styles.meta}>
-              {styleLabel(dance.style)} · {difficultyLabel(dance.difficulty)}
-            </Text>
+          <View style={styles.headerRow}>
+            {image ? <Image source={image} style={styles.thumb} /> : null}
+            <View style={{ flex: 1 }}>
+              <View style={styles.topRow}>
+                <Text style={[styles.en, { color: dance.accent }]}>{dance.nameEn}</Text>
+                <Text style={styles.meta}>
+                  {styleLabel(dance.style)} · {difficultyLabel(dance.difficulty)}
+                </Text>
+              </View>
+              <Text style={styles.name}>{dance.name}</Text>
+              <Text style={styles.mood}>{dance.mood}</Text>
+            </View>
           </View>
-          <Text style={styles.name}>{dance.name}</Text>
-          <Text style={styles.mood}>{dance.mood}</Text>
           <View style={styles.barTrack}>
             <View
               style={[
                 styles.barFill,
-                { width: `${Math.round(ratio * 100)}%`, backgroundColor: dance.accent },
+                {
+                  width: `${Math.round(ratio * 100)}%`,
+                  backgroundColor: dance.accent,
+                },
               ]}
             />
           </View>
@@ -67,11 +77,22 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     overflow: 'hidden',
   },
+  headerRow: {
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  thumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+  },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   en: {
     fontFamily: fonts.brand,
@@ -86,14 +107,13 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: fonts.bodyExtra,
     color: colors.ink,
-    fontSize: 24,
-    marginBottom: 4,
+    fontSize: 22,
+    marginBottom: 2,
   },
   mood: {
     fontFamily: fonts.body,
     color: colors.muted,
     fontSize: 14,
-    marginBottom: spacing.md,
   },
   barTrack: {
     height: 6,
