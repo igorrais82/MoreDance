@@ -14,7 +14,7 @@ import { LessonVideo } from '../../../src/components/LessonVideo';
 import { StageBackground } from '../../../src/components/StageBackground';
 import { useProgress } from '../../../src/context/ProgressContext';
 import { getLesson } from '../../../src/data/dances';
-import { getLessonMedia } from '../../../src/data/media';
+import { getDanceVideo, getLessonMedia } from '../../../src/data/media';
 import { colors, fonts, spacing } from '../../../src/theme';
 
 export default function LessonScreen() {
@@ -43,15 +43,16 @@ export default function LessonScreen() {
 
   const { dance, lesson } = data;
   const done = isLessonComplete(lesson.id);
+  const videoSource = media?.videoSource ?? getDanceVideo(dance.id);
 
   return (
     <StageBackground>
-      <ScrollView
-        contentContainerStyle={[
+      {/* Video stays outside ScrollView so Android SurfaceView stays smooth. */}
+      <View
+        style={[
           styles.content,
-          { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 36 },
+          { paddingTop: insets.top + spacing.md },
         ]}
-        showsVerticalScrollIndicator={false}
       >
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.back}>← {dance.name}</Text>
@@ -61,14 +62,18 @@ export default function LessonScreen() {
         <Text style={styles.title}>{lesson.title}</Text>
         <Text style={styles.summary}>{lesson.summary}</Text>
 
-        {media ? (
-          <LessonVideo
-            url={media.videoUrl}
-            label={media.videoLabel}
-            accent={dance.accent}
-          />
+        {videoSource != null ? (
+          <LessonVideo label={media?.videoLabel ?? dance.name} source={videoSource} />
         ) : null}
+      </View>
 
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 36 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={[styles.tip, { borderColor: dance.accent }]}>
           <Text style={styles.tipLabel}>Подсказка</Text>
           <Text style={styles.tipText}>{lesson.tip}</Text>

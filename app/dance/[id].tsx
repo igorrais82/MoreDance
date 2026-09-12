@@ -11,12 +11,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StageBackground } from '../../src/components/StageBackground';
+import { LessonVideo } from '../../src/components/LessonVideo';
 import { useProgress } from '../../src/context/ProgressContext';
 import {
   difficultyLabel,
   getDance,
   styleLabel,
 } from '../../src/data/dances';
+import { getDanceVideo } from '../../src/data/media';
 import { colors, fonts, spacing } from '../../src/theme';
 
 export default function DanceDetailScreen() {
@@ -44,12 +46,12 @@ export default function DanceDetailScreen() {
   return (
     <StageBackground>
       <Stack.Screen options={{ headerShown: false }} />
-      <ScrollView
-        contentContainerStyle={[
+      {/* Video stays outside ScrollView so Android SurfaceView stays smooth. */}
+      <View
+        style={[
           styles.content,
-          { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 32 },
+          { paddingTop: insets.top + spacing.md },
         ]}
-        showsVerticalScrollIndicator={false}
       >
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.back}>← Назад</Text>
@@ -61,6 +63,22 @@ export default function DanceDetailScreen() {
           {styleLabel(dance.style)} · {difficultyLabel(dance.difficulty)} · {dance.bpm}{' '}
           BPM · {dance.timeSignature}
         </Text>
+
+        {getDanceVideo(dance.id) != null ? (
+          <LessonVideo
+            label={dance.name}
+            source={getDanceVideo(dance.id)!}
+          />
+        ) : null}
+      </View>
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 32 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.description}>{dance.description}</Text>
         <Text style={styles.love}>{dance.whyKidsLoveIt}</Text>
 

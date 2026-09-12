@@ -1,85 +1,99 @@
+import { useFocusEffect } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { memo, useCallback, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fonts, spacing } from '../theme';
 
 type Props = {
-  url: string;
-  label: string;
-  accent?: string;
+  label?: string;
+  /** Local require('./file.mp4') */
+  source: number;
 };
 
-export function LessonVideo({ url, label, accent = colors.gold }: Props) {
-  const [started, setStarted] = useState(false);
-  const player = useVideoPlayer(url, (p) => {
-    p.loop = false;
+const StableVideoSurface = memo(function StableVideoSurface({
+  source,
+}: {
+  source: number;
+}) {
+  const started = useRef(false);
+  const player = useVideoPlayer(source, (p) => {
+    p.loop = true;
+    // Demo loops don't need audio by default — decoding A/V together
+    // is a major cost on Android emulators and mid-range phones.
+    p.muted = true;
+    p.bufferOptions = {
+      preferredForwardBufferDuration: 5,
+      minBufferForPlayback: 1,
+      prioritizeTimeOverSizeThreshold: true,
+    };
   });
 
-  if (!started) {
-    return (
-      <Pressable
-        onPress={() => {
-          setStarted(true);
-          player.play();
-        }}
-        style={({ pressed }) => [
-          styles.poster,
-          { borderColor: accent },
-          pressed && { opacity: 0.9 },
-        ]}
-      >
-        <Text style={[styles.play, { color: accent }]}>▶</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.label}>{label}</Text>
-          <Text style={styles.hint}>Видеоурок · нажми, чтобы смотреть</Text>
-        </View>
-      </Pressable>
-    );
-  }
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    const timer = setTimeout(() => {
+      try {
+        player.currentTime = 0;
+        player.play();
+      } catch {
+        // ignore
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [player]);
+
+  // Pause when leaving the screen so decode doesn't keep burning CPU.
+  useFocusEffect(
+    useCallback(() => {
+      try {
+        player.play();
+      } catch {
+        // ignore
+      }
+      return () => {
+        try {
+          player.pause();
+        } catch {
+          // ignore
+        }
+      };
+    }, [player]),
+  );
 
   return (
-    <View style={styles.wrap}>
-      <VideoView
-        style={styles.video}
-        player={player}
-        fullscreenOptions={{ enable: true }}
-        contentFit="cover"
-        nativeControls
-      />
-      <View style={styles.bar}>
-        <Text style={styles.label}>{label}</Text>
-        <Pressable
-          onPress={() => {
-            if (player.playing) player.pause();
-            else player.play();
-          }}
-        >
-          <Text style={[styles.toggle, { color: accent }]}>
-            {player.playing ? 'Пауза' : 'Смотреть'}
-          </Text>
-        </Pressable>
+    <VideoView
+      style={styles.video}
+      player={player}
+      // SurfaceView is much cheaper than TextureView (GPU/CPU).
+      // Keep this player outside ScrollView so SurfaceView doesn't flicker.
+      surfaceType="surfaceView"
+      contentFit="contain"
+      nativeControls
+      fullscreenOptions={{ enable: true }}
+      playsInline
+      allowsVideoFrameAnalysis={false}
+    />
+  );
+});
+
+/** Simple looping lesson/dance video player. */
+export function LessonVideo({ label, source }: Props) {
+  return (
+    <View style={styles.wrap} collapsable={false}>
+      <View style={styles.videoShell} collapsable={false}>
+        <StableVideoSurface source={source} />
       </View>
+      {label ? (
+        <View style={styles.bar}>
+          <Text style={styles.label}>{label}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  poster: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    borderWidth: 1.5,
-    borderRadius: 18,
-    padding: spacing.md,
-    backgroundColor: colors.panel,
-    marginBottom: spacing.md,
-  },
-  play: {
-    fontSize: 28,
-    width: 44,
-    textAlign: 'center',
-  },
   wrap: {
     borderRadius: 18,
     overflow: 'hidden',
@@ -88,14 +102,19 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     backgroundColor: '#000',
   },
+  videoShell: {
+    width: '100%',
+    height: 220,
+    backgroundColor: '#000',
+    zIndex: 1,
+    elevation: 1,
+  },
   video: {
     width: '100%',
-    height: 200,
+    height: '100%',
+    backgroundColor: '#000',
   },
   bar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingVertical: 10,
     backgroundColor: colors.panel,
@@ -104,15 +123,5 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyExtra,
     color: colors.ink,
     fontSize: 15,
-  },
-  hint: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  toggle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 14,
   },
 });

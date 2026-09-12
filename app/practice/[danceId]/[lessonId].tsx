@@ -27,8 +27,25 @@ export default function PracticeScreen() {
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [stepIndex, setStepIndex] = useState(0);
+  const [cueMinHeight, setCueMinHeight] = useState(0);
   const startedAt = useRef<number | null>(null);
   const accrued = useRef(0);
+  const addPracticeSecondsRef = useRef(addPracticeSeconds);
+  addPracticeSecondsRef.current = addPracticeSeconds;
+
+  const flushPractice = () => {
+    const live =
+      startedAt.current != null
+        ? Math.floor((Date.now() - startedAt.current) / 1000)
+        : 0;
+    const total = accrued.current + live;
+    accrued.current = 0;
+    startedAt.current = null;
+    if (total > 0) {
+      addPracticeSecondsRef.current(total).catch(() => undefined);
+    }
+    return total;
+  };
 
   useEffect(() => {
     if (!running) return;
@@ -40,18 +57,17 @@ export default function PracticeScreen() {
     return () => clearInterval(id);
   }, [running]);
 
+  // Flush only on leave — never when progress callbacks change identity
   useEffect(() => {
     return () => {
-      const total =
-        accrued.current +
-        (startedAt.current != null
-          ? Math.floor((Date.now() - startedAt.current) / 1000)
-          : 0);
-      if (total > 0) {
-        addPracticeSeconds(total).catch(() => undefined);
-      }
+      flushPractice();
     };
-  }, [addPracticeSeconds]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- unmount only
+  }, []);
+
+  useEffect(() => {
+    setCueMinHeight(0);
+  }, [lessonId]);
 
   if (!data) {
     return (
@@ -70,6 +86,10 @@ export default function PracticeScreen() {
   const step = lesson.steps[stepIndex % lesson.steps.length];
   const done = isLessonComplete(lesson.id);
 
+  const onCueStepLayout = (height: number) => {
+    setCueMinHeight((prev) => (height > prev ? height : prev));
+  };
+
   const toggle = () => {
     if (running) {
       if (startedAt.current != null) {
@@ -81,6 +101,18 @@ export default function PracticeScreen() {
       startedAt.current = Date.now();
       setRunning(true);
     }
+  };
+
+  const finishLesson = async () => {
+    if (running) {
+      if (startedAt.current != null) {
+        accrued.current += Math.floor((Date.now() - startedAt.current) / 1000);
+        startedAt.current = null;
+      }
+      setRunning(false);
+    }
+    flushPractice();
+    await completeLesson(lesson.id);
   };
 
   const mm = Math.floor(elapsed / 60)
@@ -120,11 +152,39 @@ export default function PracticeScreen() {
           />
         </View>
 
-        <View style={styles.cue}>
-          <Text style={styles.cueCount}>{step.count}</Text>
-          <Text style={styles.cueTitle}>{step.title}</Text>
-          <Text style={styles.cueInstruction}>{step.instruction}</Text>
+        <View style={styles.midSpacer} />
+
+        <View
+          style={[
+            styles.cue,
+            cueMinHeight > 0 ? { minHeight: cueMinHeight + 8 } : null,
+          ]}
+        >
+          <View style={styles.cueInner}>
+            <Text style={[styles.cueCount, { color: dance.accent }]}>
+              {step.count}
+            </Text>
+            <Text style={styles.cueTitle}>{step.title}</Text>
+            <Text style={styles.cueInstruction}>{step.instruction}</Text>
+          </View>
+
+          {/* Invisible stack: height of the cue = longest step + a little padding */}
+          <View style={styles.cueMeasureLayer} pointerEvents="none">
+            {lesson.steps.map((s, i) => (
+              <View
+                key={`${s.count}-${s.title}-${i}`}
+                style={styles.cueInner}
+                onLayout={(e) => onCueStepLayout(e.nativeEvent.layout.height)}
+              >
+                <Text style={styles.cueCount}>{s.count}</Text>
+                <Text style={styles.cueTitle}>{s.title}</Text>
+                <Text style={styles.cueInstruction}>{s.instruction}</Text>
+              </View>
+            ))}
+          </View>
         </View>
+
+        <View style={styles.midSpacer} />
 
         <View style={styles.footer}>
           <Pressable
@@ -136,14 +196,12 @@ export default function PracticeScreen() {
             <Text style={styles.ghostText}>Следующий шаг</Text>
           </Pressable>
           <Pressable
-            onPress={async () => {
-              if (running) toggle();
-              await completeLesson(lesson.id);
-            }}
+            onPress={finishLesson}
+            disabled={done}
             style={({ pressed }) => [
               styles.doneBtn,
               done && { backgroundColor: colors.mint },
-              pressed && { opacity: 0.88 },
+              pressed && !done && { opacity: 0.88 },
             ]}
           >
             <Text style={styles.doneText}>
@@ -181,33 +239,45 @@ const styles = StyleSheet.create({
   },
   timer: {
     fontFamily: fonts.brand,
-    fontSize: 42,
+    fontSize: 34,
     color: colors.gold,
-    marginTop: 4,
-    marginBottom: spacing.md,
+    marginTop: 2,
+    marginBottom: spacing.sm,
   },
   metronomeBlock: {
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: 0,
+    flexShrink: 0,
   },
   cue: {
-    flex: 1,
     backgroundColor: colors.panel,
     borderRadius: 22,
-    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.line,
-    justifyContent: 'center',
+    overflow: 'hidden',
+    alignSelf: 'stretch',
+    flexShrink: 0,
+  },
+  cueInner: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+  },
+  cueMeasureLayer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    opacity: 0,
   },
   cueCount: {
     fontFamily: fonts.brand,
-    fontSize: 36,
-    color: colors.sky,
-    marginBottom: 4,
+    fontSize: 22,
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
   cueTitle: {
     fontFamily: fonts.bodyExtra,
-    fontSize: 22,
+    fontSize: 20,
     color: colors.ink,
     marginBottom: 8,
   },
@@ -217,9 +287,13 @@ const styles = StyleSheet.create({
     color: colors.muted,
     lineHeight: 24,
   },
+  midSpacer: {
+    flex: 1,
+    minHeight: spacing.sm,
+  },
   footer: {
-    marginTop: spacing.md,
     gap: 10,
+    flexShrink: 0,
   },
   ghostBtn: {
     borderWidth: 1.5,

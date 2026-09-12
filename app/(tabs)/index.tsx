@@ -79,7 +79,10 @@ export default function HomeScreen() {
           <View style={styles.hero}>
             <Animated.View style={[styles.heroGlow, { opacity: spotlightOpacity }]} />
             <BrandLogo size={248} style={styles.logo} />
-            <Text style={styles.headline}>Спортивные бальные — шаг за шагом</Text>
+            <View style={styles.headlineBlock}>
+              <Text style={styles.headline}>Спортивные бальные танцы</Text>
+              <Text style={styles.headlineTag}>шаг за шагом</Text>
+            </View>
             <Text style={styles.sub}>
               Привет, {dancerName}! Уровень {level} · {stars} ★
             </Text>
@@ -221,12 +224,26 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(0,245,255,0.45)',
   },
-  headline: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 20,
-    color: colors.ink,
+  headlineBlock: {
     marginTop: spacing.sm,
     maxWidth: 320,
+    alignItems: 'center',
+    gap: 4,
+  },
+  headline: {
+    fontFamily: fonts.brand,
+    fontSize: 28,
+    lineHeight: 32,
+    letterSpacing: 0.8,
+    color: colors.ink,
+    textAlign: 'center',
+  },
+  headlineTag: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 17,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: colors.gold,
     textAlign: 'center',
   },
   sub: {

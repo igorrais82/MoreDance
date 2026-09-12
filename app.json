@@ -27,7 +27,9 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.moredance.app",
-      "permissions": ["android.permission.CAMERA"],
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -43,6 +45,14 @@
         "expo-camera",
         {
           "cameraPermission": "MoreDance использует камеру для тренировки поз перед зеркалом."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundPlayback": false
         }
       ]
     ]

@@ -9,24 +9,39 @@ export type PoseGuide = {
 };
 
 export type LessonMedia = {
-  videoUrl: string;
+  /**
+   * Optional override. By default the lesson uses the dance video from
+   * `danceVideos` via `getDanceVideo(danceId)`.
+   */
+  videoSource?: number;
   videoLabel: string;
   pose: PoseGuide;
 };
 
-/** Demo clips until real studio videos are uploaded. */
-const DEMO = {
-  a: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-  b: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-  c: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-  d: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-  e: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
+/** One looping demo video per dance — replace files in assets/videos anytime.
+ *
+ * Current free Mixkit stock sources (personal/demo use):
+ * - waltz:     local — d:\Танцы\Жемчужина Анапы 2026\Артем\1.mp4
+ * - cha-cha:   local — d:\Танцы\Жемчужина Анапы 2026\Артем\8.mp4
+ * - jive:      local — d:\Танцы\Жемчужина Анапы 2026\Артем\9_1.mp4
+ * - quickstep: local — d:\Танцы\Жемчужина Анапы 2026\Артем\3.mp4
+ * - samba:     local — d:\Танцы\Жемчужина Анапы 2026\Артем\9_3.mp4
+ */
+export const danceVideos: Record<string, number> = {
+  waltz: require('../../assets/videos/waltz.mp4'),
+  'cha-cha': require('../../assets/videos/cha-cha.mp4'),
+  jive: require('../../assets/videos/jive.mp4'),
+  quickstep: require('../../assets/videos/quickstep.mp4'),
+  samba: require('../../assets/videos/samba.mp4'),
 };
+
+export function getDanceVideo(danceId: string): number | undefined {
+  return danceVideos[danceId];
+}
 
 export const lessonMedia: Record<string, LessonMedia> = {
   'waltz-posture': {
-    videoUrl: DEMO.a,
-    videoLabel: 'Демо: осанка вальса',
+    videoLabel: 'Осанка вальса',
     pose: {
       stance: 'closed',
       arms: 'frame',
@@ -35,8 +50,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'waltz-box': {
-    videoUrl: DEMO.a,
-    videoLabel: 'Демо: квадрат вальса',
+    videoLabel: 'Квадрат вальса',
     pose: {
       stance: 'forward',
       arms: 'frame',
@@ -45,8 +59,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'waltz-rise': {
-    videoUrl: DEMO.a,
-    videoLabel: 'Демо: подъём вальса',
+    videoLabel: 'Подъём вальса',
     pose: {
       stance: 'closed',
       arms: 'frame',
@@ -55,8 +68,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'cha-rhythm': {
-    videoUrl: DEMO.b,
-    videoLabel: 'Демо: ритм ча-ча-ча',
+    videoLabel: 'Ритм ча-ча-ча',
     pose: {
       stance: 'open',
       arms: 'side',
@@ -65,8 +77,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'cha-basic': {
-    videoUrl: DEMO.b,
-    videoLabel: 'Демо: база ча-ча-ча',
+    videoLabel: 'База ча-ча-ча',
     pose: {
       stance: 'back',
       arms: 'free',
@@ -75,8 +86,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'cha-locks': {
-    videoUrl: DEMO.b,
-    videoLabel: 'Демо: замки ча-ча-ча',
+    videoLabel: 'Замки ча-ча-ча',
     pose: {
       stance: 'side',
       arms: 'side',
@@ -85,8 +95,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'jive-bounce': {
-    videoUrl: DEMO.c,
-    videoLabel: 'Демо: пружинка джайва',
+    videoLabel: 'Пружинка джайва',
     pose: {
       stance: 'open',
       arms: 'bounce',
@@ -95,8 +104,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'jive-basic': {
-    videoUrl: DEMO.c,
-    videoLabel: 'Демо: база джайва',
+    videoLabel: 'База джайва',
     pose: {
       stance: 'side',
       arms: 'bounce',
@@ -105,8 +113,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'jive-kick': {
-    videoUrl: DEMO.c,
-    videoLabel: 'Демо: кик джайва',
+    videoLabel: 'Кик джайва',
     pose: {
       stance: 'forward',
       arms: 'free',
@@ -115,8 +122,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'qs-walk': {
-    videoUrl: DEMO.d,
-    videoLabel: 'Демо: бег квикстепа',
+    videoLabel: 'Бег квикстепа',
     pose: {
       stance: 'forward',
       arms: 'frame',
@@ -125,8 +131,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'qs-chasse': {
-    videoUrl: DEMO.d,
-    videoLabel: 'Демо: шассе',
+    videoLabel: 'Шассе квикстепа',
     pose: {
       stance: 'side',
       arms: 'frame',
@@ -135,8 +140,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'qs-lock': {
-    videoUrl: DEMO.d,
-    videoLabel: 'Демо: локстеп',
+    videoLabel: 'Локстеп',
     pose: {
       stance: 'forward',
       arms: 'frame',
@@ -145,8 +149,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'samba-bounce': {
-    videoUrl: DEMO.e,
-    videoLabel: 'Демо: отскок самбы',
+    videoLabel: 'Отскок самбы',
     pose: {
       stance: 'open',
       arms: 'bounce',
@@ -155,8 +158,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'samba-whisk': {
-    videoUrl: DEMO.e,
-    videoLabel: 'Демо: виск самбы',
+    videoLabel: 'Виск самбы',
     pose: {
       stance: 'side',
       arms: 'free',
@@ -165,8 +167,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     },
   },
   'samba-volta': {
-    videoUrl: DEMO.e,
-    videoLabel: 'Демо: вольта',
+    videoLabel: 'Вольта',
     pose: {
       stance: 'forward',
       arms: 'up',

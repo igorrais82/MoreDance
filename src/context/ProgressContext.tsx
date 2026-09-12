@@ -5,6 +5,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -56,6 +57,8 @@ const ProgressContext = createContext<ProgressContextValue | null>(null);
 export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<ProgressState>(defaultState);
   const [ready, setReady] = useState(false);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
     let cancelled = false;
@@ -81,80 +84,88 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const persist = useCallback(async (next: ProgressState) => {
-    setState(next);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  const commit = useCallback((updater: (prev: ProgressState) => ProgressState) => {
+    setState((prev) => {
+      const next = updater(prev);
+      stateRef.current = next;
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next)).catch(() => undefined);
+      return next;
+    });
   }, []);
 
   const completeLesson = useCallback(
     async (lessonId: string) => {
-      if (state.completedLessons.includes(lessonId)) return;
-      await persist({
-        ...state,
-        completedLessons: [...state.completedLessons, lessonId],
-        stars: state.stars + 3,
+      commit((prev) => {
+        if (prev.completedLessons.includes(lessonId)) return prev;
+        return {
+          ...prev,
+          completedLessons: [...prev.completedLessons, lessonId],
+          stars: prev.stars + 3,
+        };
       });
     },
-    [persist, state],
+    [commit],
   );
 
   const addPracticeSeconds = useCallback(
     async (seconds: number) => {
       if (seconds <= 0) return;
       const gained = Math.floor(seconds / 30);
-      await persist({
-        ...state,
-        practiceSeconds: state.practiceSeconds + seconds,
-        stars: state.stars + gained,
-      });
+      commit((prev) => ({
+        ...prev,
+        practiceSeconds: prev.practiceSeconds + seconds,
+        stars: prev.stars + gained,
+      }));
     },
-    [persist, state],
+    [commit],
   );
 
   const addCameraPracticeSeconds = useCallback(
     async (seconds: number) => {
       if (seconds <= 0) return;
-      await persist({
-        ...state,
-        cameraPracticeSeconds: state.cameraPracticeSeconds + seconds,
-        practiceSeconds: state.practiceSeconds + seconds,
-        stars: state.stars + Math.floor(seconds / 25),
-      });
+      commit((prev) => ({
+        ...prev,
+        cameraPracticeSeconds: prev.cameraPracticeSeconds + seconds,
+        practiceSeconds: prev.practiceSeconds + seconds,
+        stars: prev.stars + Math.floor(seconds / 25),
+      }));
     },
-    [persist, state],
+    [commit],
   );
 
   const recordPoseScore = useCallback(
     async (lessonId: string, score: number) => {
       const clamped = Math.max(0, Math.min(100, Math.round(score)));
-      const prev = state.poseBestScores[lessonId] ?? 0;
-      if (clamped <= prev) return;
-      const bonus = clamped >= 80 ? 2 : clamped >= 60 ? 1 : 0;
-      await persist({
-        ...state,
-        poseBestScores: { ...state.poseBestScores, [lessonId]: clamped },
-        stars: state.stars + bonus,
+      commit((prev) => {
+        const prevBest = prev.poseBestScores[lessonId] ?? 0;
+        if (clamped <= prevBest) return prev;
+        const bonus = clamped >= 80 ? 2 : clamped >= 60 ? 1 : 0;
+        return {
+          ...prev,
+          poseBestScores: { ...prev.poseBestScores, [lessonId]: clamped },
+          stars: prev.stars + bonus,
+        };
       });
     },
-    [persist, state],
+    [commit],
   );
 
   const setDancerName = useCallback(
     async (name: string) => {
-      await persist({
-        ...state,
+      commit((prev) => ({
+        ...prev,
         dancerName: name.trim().slice(0, 18) || 'Танцор',
-      });
+      }));
     },
-    [persist, state],
+    [commit],
   );
 
   const resetProgress = useCallback(async () => {
-    await persist({
+    commit((prev) => ({
       ...defaultState,
-      dancerName: state.dancerName,
-    });
-  }, [persist, state.dancerName]);
+      dancerName: prev.dancerName,
+    }));
+  }, [commit]);
 
   const isLessonComplete = useCallback(
     (lessonId: string) => state.completedLessons.includes(lessonId),

@@ -1,3 +1,7 @@
+import {
+  setAudioModeAsync,
+  useAudioPlayer,
+} from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -9,6 +13,9 @@ import {
 } from 'react-native';
 
 import { colors, fonts, spacing } from '../theme';
+
+const tickSound = require('../../assets/sounds/tick.wav');
+const accentSound = require('../../assets/sounds/tick-accent.wav');
 
 type Props = {
   bpm: number;
@@ -32,16 +39,48 @@ export function Metronome({
   const onTickRef = useRef(onTick);
   onTickRef.current = onTick;
 
+  const tickPlayer = useAudioPlayer(tickSound);
+  const accentPlayer = useAudioPlayer(accentSound);
+  const tickPlayerRef = useRef(tickPlayer);
+  const accentPlayerRef = useRef(accentPlayer);
+  tickPlayerRef.current = tickPlayer;
+  accentPlayerRef.current = accentPlayer;
+
+  useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      interruptionMode: 'mixWithOthers',
+      shouldPlayInBackground: false,
+    }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    // Classic metronome balance: quieter tocks, stronger first beat
+    tickPlayer.volume = 0.62;
+    accentPlayer.volume = 1;
+  }, [tickPlayer, accentPlayer]);
+
   useEffect(() => {
     if (!running) return;
+
     const intervalMs = Math.max(200, Math.round(60000 / bpm));
-    const id = setInterval(() => {
-      setBeat((prev) => {
-        const next = (prev + 1) % counts.length;
-        return next;
-      });
-      onTickRef.current?.();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
+    let current = 0;
+    setBeat(0);
+
+    const pulse = (index: number) => {
+      const player =
+        index === 0 ? accentPlayerRef.current : tickPlayerRef.current;
+      try {
+        player.seekTo(0);
+        player.play();
+      } catch {
+        // ignore playback races
+      }
+      Haptics.impactAsync(
+        index === 0
+          ? Haptics.ImpactFeedbackStyle.Medium
+          : Haptics.ImpactFeedbackStyle.Light,
+      ).catch(() => undefined);
       scale.setValue(1.18);
       Animated.spring(scale, {
         toValue: 1,
@@ -49,7 +88,18 @@ export function Metronome({
         tension: 140,
         useNativeDriver: true,
       }).start();
+    };
+
+    // Opening click for the first count shown
+    pulse(0);
+
+    const id = setInterval(() => {
+      current = (current + 1) % counts.length;
+      setBeat(current);
+      onTickRef.current?.();
+      pulse(current);
     }, intervalMs);
+
     return () => clearInterval(id);
   }, [bpm, counts.length, running, scale]);
 
@@ -109,9 +159,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   pulse: {
-    width: 168,
-    height: 168,
-    borderRadius: 84,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
     borderWidth: 3,
     alignItems: 'center',
     justifyContent: 'center',
@@ -123,8 +173,8 @@ const styles = StyleSheet.create({
   },
   count: {
     fontFamily: fonts.brand,
-    fontSize: 72,
-    lineHeight: 76,
+    fontSize: 88,
+    lineHeight: 92,
   },
   bpm: {
     fontFamily: fonts.body,
