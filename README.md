@@ -1,6 +1,6 @@
 # MoreDance
 
-Мобильное приложение для детей: учимся спортивным бальным танцам — стандарт и латина.
+Мобильное приложение для детей: учимся спортивным бальным танцам - стандарт и латина.
 
 ## Что внутри
 
@@ -11,15 +11,48 @@
 - **Аккаунт родителя** с PIN: цель практики, статистика, сброс прогресса
 - Прогресс, звёзды и уровни на устройстве
 
-## Запуск
+## Запуск (одна команда на всё)
 
 ```bash
 npm install --legacy-peer-deps
 npx expo start
 ```
 
-Дальше открой проект в **Expo Go** на телефоне (QR-код в терминале) или нажми `w` для web / `a` для Android-эмулятора.
+Дальше терминал предложит варианты - приложение работает и на Android, и на iPhone,
+JS-код у них общий.
+
+### Android
+
+- **Эмулятор**: `powershell -File scripts/start-emulator.ps1`, затем клавиша `a` в терминале Expo.
+- **Телефон**: установите Expo Go из Google Play и отсканируйте QR-код из терминала.
+
+### iPhone
+
+- Установите **Expo Go** из App Store. Версия Expo Go и версия проекта должны
+  совпадать: проект на **SDK 58**, актуальный Expo Go в App Store - тоже SDK 58.
+  Если Expo Go ругается на несовпадение SDK, обновите приложение из App Store.
+- Телефон и компьютер - в одной Wi-Fi сети, отсканируйте QR-код камерой iPhone.
+- Если сеть другая (гостевой Wi-Fi, мобильный интернет):
+  ```bash
+  npx expo start --tunnel
+  ```
+  и отсканируйте новый QR-код.
+
+> Экран с камерой проверяйте только на реальном телефоне: в эмуляторе Android и в
+> симуляторе iOS камера отсутствует. Разрешение на камеру запрашивается один раз
+> при первом входе в «Позу».
+
+### Сборка установочного приложения
+
+```bash
+npx eas build -p android --profile preview   # APK для Android
+npx eas build -p ios --profile preview       # сборка для iPhone (нужен Apple ID)
+```
+
+Для установки на iPhone вне Expo Go нужен аккаунт Apple Developer (TestFlight или
+устройство, добавленное в профиль сборки).
 
 ## Стек
 
-Expo (React Native) · Expo Router · AsyncStorage · Reanimated · Google Fonts (Bebas Neue, Nunito)
+Expo (React Native) · Expo Router · AsyncStorage · Reanimated · Google Fonts (Bebas Neue, Nunito) ·
+expo-video, expo-camera, expo-audio

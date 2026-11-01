@@ -5,13 +5,13 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StageBackground } from '../../src/components/StageBackground';
+import { Text } from '../../src/components/Text';
 import { useParent } from '../../src/context/ParentContext';
 import { useProgress } from '../../src/context/ProgressContext';
 import { dances } from '../../src/data/dances';
@@ -128,7 +128,7 @@ export default function ParentScreen() {
           </Text>
           <PinPad
             title="Новый PIN"
-            subtitle="Запомни код — он хранится только на этом телефоне"
+            subtitle="Запомни код - он хранится только на этом телефоне"
             cta="Введи 4 цифры"
             onSubmit={async (pin) => {
               const ok = await parent.setupPin(pin);

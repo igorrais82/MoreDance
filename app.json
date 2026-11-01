@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "moredance",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#14082A"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.moredance.app",
@@ -39,12 +34,33 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#14082A",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#14082A"
+          }
+        }
+      ],
       "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "MoreDance открывает галерею, чтобы выбрать фото профиля танцора."
+        }
+      ],
       [
         "expo-camera",
         {
-          "cameraPermission": "MoreDance использует камеру для тренировки поз перед зеркалом."
+          "cameraPermission": "MoreDance использует камеру для тренировки поз перед зеркалом.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": false
         }
       ],
       [

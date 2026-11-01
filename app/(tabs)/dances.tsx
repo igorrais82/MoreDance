@@ -1,10 +1,11 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '../../src/components/BrandLogo';
 import { DanceTile } from '../../src/components/DanceTile';
 import { StageBackground } from '../../src/components/StageBackground';
+import { Text } from '../../src/components/Text';
 import { useProgress } from '../../src/context/ProgressContext';
 import { dances } from '../../src/data/dances';
 import { colors, fonts, spacing } from '../../src/theme';

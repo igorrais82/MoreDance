@@ -1,16 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import React from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '../../src/components/BrandLogo';
 import { StageBackground } from '../../src/components/StageBackground';
+import { Text } from '../../src/components/Text';
 import { useProgress } from '../../src/context/ProgressContext';
 import { dances } from '../../src/data/dances';
 import { colors, fonts, spacing } from '../../src/theme';
@@ -24,23 +18,15 @@ function formatTime(totalSeconds: number) {
 export default function ProgressScreen() {
   const insets = useSafeAreaInsets();
   const {
-    dancerName,
-    setDancerName,
     stars,
     level,
     completedLessons,
     practiceSeconds,
     totalLessons,
     danceProgress,
-    ready,
     averagePoseScore,
     cameraPracticeSeconds,
   } = useProgress();
-  const [nameDraft, setNameDraft] = useState(dancerName);
-
-  useEffect(() => {
-    if (ready) setNameDraft(dancerName);
-  }, [ready, dancerName]);
 
   return (
     <StageBackground>
@@ -82,28 +68,10 @@ export default function ProgressScreen() {
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Имя танцора</Text>
-          <TextInput
-            value={nameDraft}
-            onChangeText={setNameDraft}
-            placeholder="Как тебя зовут?"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            maxLength={18}
-          />
-          <Pressable
-            onPress={() => setDancerName(nameDraft)}
-            style={({ pressed }) => [styles.saveBtn, pressed && { opacity: 0.85 }]}
-          >
-            <Text style={styles.saveText}>Сохранить</Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.panel}>
           <Text style={styles.panelTitle}>Практика</Text>
           <Text style={styles.panelCopy}>{formatTime(practiceSeconds)}</Text>
           <Text style={styles.hint}>
-            За каждые 30 секунд практики под метроном — +1 ★
+            За каждые 30 секунд практики под метроном - +1 ★
           </Text>
           <View style={styles.barTrack}>
             <View
@@ -215,30 +183,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 13,
     marginTop: 4,
-  },
-  input: {
-    backgroundColor: colors.bg,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: colors.ink,
-    fontFamily: fonts.bodyBold,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    marginBottom: 10,
-  },
-  saveBtn: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.coral,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  saveText: {
-    fontFamily: fonts.bodyExtra,
-    color: colors.ink,
-    fontSize: 14,
   },
   barTrack: {
     height: 8,

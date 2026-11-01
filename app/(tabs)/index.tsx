@@ -1,19 +1,22 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
+import { Link, useRouter } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Image,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
+  Text as RNText,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '../../src/components/BrandLogo';
+import { PerformancesList } from '../../src/components/PerformancesList';
 import { StageBackground } from '../../src/components/StageBackground';
+import { Text } from '../../src/components/Text';
+import { useDancer } from '../../src/context/DancerContext';
 import { useProgress } from '../../src/context/ProgressContext';
 import { getDanceImage } from '../../src/data/danceImages';
 import { dances } from '../../src/data/dances';
@@ -21,7 +24,11 @@ import { colors, fonts, spacing } from '../../src/theme';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const [view, setView] = useState<'scene' | 'performances'>('scene');
   const { dancerName, stars, level, nextLesson, completedLessons } = useProgress();
+  const dancer = useDancer();
+  const greeting = dancer.firstName || dancerName;
   const glow = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(0)).current;
 
@@ -59,10 +66,39 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 32 },
+          // Верхний отступ оставляет место крупной кнопке настроек.
+          { paddingTop: insets.top + 96, paddingBottom: insets.bottom + 32 },
         ]}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.segments}>
+          <Pressable
+            onPress={() => setView('scene')}
+            style={[styles.segment, view === 'scene' && styles.segmentActive]}
+          >
+            <Text style={[styles.segmentText, view === 'scene' && styles.segmentTextActive]}>
+              Сцена
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setView('performances')}
+            style={[styles.segment, view === 'performances' && styles.segmentActive]}
+          >
+            <Text
+              style={[
+                styles.segmentText,
+                view === 'performances' && styles.segmentTextActive,
+              ]}
+            >
+              Выступления и разное
+            </Text>
+          </Pressable>
+        </View>
+
+        {view === 'performances' ? (
+          <PerformancesList />
+        ) : (
+          <>
         <Animated.View
           style={{
             opacity: rise,
@@ -84,7 +120,7 @@ export default function HomeScreen() {
               <Text style={styles.headlineTag}>шаг за шагом</Text>
             </View>
             <Text style={styles.sub}>
-              Привет, {dancerName}! Уровень {level} · {stars} ★
+              Привет, {greeting}! Уровень {level} · {stars} ★
             </Text>
             <View style={styles.ctaRow}>
               {nextLesson ? (
@@ -150,7 +186,10 @@ export default function HomeScreen() {
               <Text style={styles.nextLesson}>{nextLesson.title}</Text>
               <Text style={styles.nextHint}>
                 Уроков пройдено: {completedLessons.length} из{' '}
-                {dances.reduce((n, d) => n + d.lessons.length, 0)}
+                {dances.reduce(
+                  (n, d) => n + d.lessons.filter((l) => !l.runthrough).length,
+                  0,
+                )}
               </Text>
             </LinearGradient>
           </View>
@@ -194,12 +233,92 @@ export default function HomeScreen() {
             })}
           </View>
         </View>
+          </>
+        )}
       </ScrollView>
+
+      <Pressable
+        onPress={() => router.push('/settings')}
+        accessibilityRole="button"
+        accessibilityLabel="Настройки"
+        hitSlop={14}
+        style={({ pressed }) => [
+          styles.gear,
+          { top: insets.top + 4 },
+          pressed && styles.gearPressed,
+        ]}
+      >
+        <LinearGradient
+          colors={[colors.cyan, colors.magenta]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.gearPlate}
+        >
+          <RNText style={styles.gearGlyph}>⚙</RNText>
+        </LinearGradient>
+      </Pressable>
     </StageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  segments: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: spacing.md,
+  },
+  segment: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.panelSoft,
+  },
+  segmentActive: {
+    borderColor: colors.cyan,
+    backgroundColor: 'rgba(0,245,255,0.14)',
+  },
+  segmentText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.muted,
+  },
+  segmentTextActive: {
+    color: colors.ink,
+  },
+  gear: {
+    position: 'absolute',
+    right: 12,
+    width: 84,
+    height: 84,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gearPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.95 }],
+  },
+  gearPlate: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(247,251,255,0.65)',
+  },
+  gearGlyph: {
+    fontSize: 38,
+    lineHeight: 44,
+    color: '#FFFFFF',
+    includeFontPadding: false,
+    textAlign: 'center',
+    // Тень внутри глифа, чтобы шестерёнка читалась на градиенте.
+    textShadowColor: 'rgba(20,8,42,0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
   content: {
     paddingHorizontal: spacing.lg,
   },

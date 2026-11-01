@@ -5,16 +5,18 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LessonVideo } from '../../../src/components/LessonVideo';
 import { StageBackground } from '../../../src/components/StageBackground';
+import { Text } from '../../../src/components/Text';
 import { useProgress } from '../../../src/context/ProgressContext';
 import { getLesson } from '../../../src/data/dances';
 import { getDanceVideo, getLessonMedia } from '../../../src/data/media';
+import { getDanceImage } from '../../../src/data/danceImages';
+import { formatHold } from '../../../src/lib/frame';
 import { colors, fonts, spacing } from '../../../src/theme';
 
 export default function LessonScreen() {
@@ -26,7 +28,12 @@ export default function LessonScreen() {
   const media = getLessonMedia(lessonId);
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { completeLesson, isLessonComplete, poseBestScores } = useProgress();
+  const {
+    completeLesson,
+    isLessonComplete,
+    poseBestScores,
+    frameBestSeconds,
+  } = useProgress();
 
   if (!data) {
     return (
@@ -42,47 +49,62 @@ export default function LessonScreen() {
   }
 
   const { dance, lesson } = data;
+  const accent = lesson.accent ?? dance.accent;
   const done = isLessonComplete(lesson.id);
   const videoSource = media?.videoSource ?? getDanceVideo(dance.id);
 
   return (
     <StageBackground>
-      {/* Video stays outside ScrollView so Android SurfaceView stays smooth. */}
+      {/* Fixed player: does not move while steps/actions scroll. */}
       <View
         style={[
-          styles.content,
-          { paddingTop: insets.top + spacing.md },
+          styles.stickyPlayer,
+          { paddingTop: insets.top + spacing.sm },
         ]}
       >
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Text style={styles.back}>← {dance.name}</Text>
         </Pressable>
-
-        <Text style={[styles.en, { color: dance.accent }]}>{dance.nameEn}</Text>
-        <Text style={styles.title}>{lesson.title}</Text>
-        <Text style={styles.summary}>{lesson.summary}</Text>
-
         {videoSource != null ? (
-          <LessonVideo label={media?.videoLabel ?? dance.name} source={videoSource} />
+          <LessonVideo
+            label={media?.videoLabel ?? dance.name}
+            source={videoSource}
+            poster={getDanceImage(dance.id)}
+          />
         ) : null}
       </View>
 
       <ScrollView
+        style={styles.scroll}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + 36 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.tip, { borderColor: dance.accent }]}>
+        <Text style={[styles.en, { color: accent }]}>{dance.nameEn}</Text>
+        <Text style={[styles.title, lesson.runthrough && { color: accent }]}>
+          {lesson.title}
+        </Text>
+        <Text style={styles.summary}>{lesson.summary}</Text>
+
+        <View style={[styles.tip, { borderColor: accent }]}>
           <Text style={styles.tipLabel}>Подсказка</Text>
           <Text style={styles.tipText}>{lesson.tip}</Text>
         </View>
 
-        <Text style={styles.section}>Шаги</Text>
+        <Text style={styles.section}>
+          {lesson.theory
+            ? 'Материал'
+            : lesson.runthrough
+              ? 'Что танцуем'
+              : lesson.frameHold
+                ? 'Что проверить'
+                : 'Шаги'}
+        </Text>
         {lesson.steps.map((step, index) => (
           <View key={`${step.count}-${index}`} style={styles.step}>
-            <View style={[styles.countBubble, { backgroundColor: dance.accent }]}>
+            <View style={[styles.countBubble, { backgroundColor: accent }]}>
               <Text style={styles.countText}>{step.count}</Text>
             </View>
             <View style={{ flex: 1 }}>
@@ -93,42 +115,105 @@ export default function LessonScreen() {
         ))}
 
         <View style={styles.actions}>
-          <Link href={`/practice/${dance.id}/${lesson.id}`} asChild>
-            <Pressable
-              style={({ pressed }) => [styles.actionPress, pressed && styles.pressed]}
-            >
-              <LinearGradient
-                colors={[colors.cyan, '#3D8BFF']}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={[styles.actionButton, { borderColor: colors.cyan }]}
-              >
-                <Text style={styles.actionTitle}>Практика со счётом</Text>
-                <Text style={styles.actionHint}>Метроном и шаги урока</Text>
-              </LinearGradient>
-            </Pressable>
-          </Link>
+          {!lesson.theory ? (
+            <>
+              {lesson.runthrough ? (
+                <Link href={`/runthrough/${dance.id}/${lesson.id}`} asChild>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.actionPress,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={['#FFD84A', '#FF9F1A']}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={[styles.actionButton, { borderColor: colors.gold }]}
+                    >
+                      <Text style={styles.actionTitle}>Прогон под музыку</Text>
+                      <Text style={styles.actionHint}>
+                        Полторы минуты под музыку без остановок
+                      </Text>
+                    </LinearGradient>
+                  </Pressable>
+                </Link>
+              ) : lesson.frameHold ? (
+                <Link href={`/frame/${dance.id}/${lesson.id}`} asChild>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.actionPress,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[colors.cyan, '#3D8BFF']}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={[styles.actionButton, { borderColor: colors.cyan }]}
+                    >
+                      <Text style={styles.actionTitle}>
+                        Держание рамы
+                        {frameBestSeconds[lesson.id]
+                          ? ` · рекорд ${formatHold(frameBestSeconds[lesson.id])}`
+                          : ''}
+                      </Text>
+                      <Text style={styles.actionHint}>
+                        Таймер удержания с оценкой результата
+                      </Text>
+                    </LinearGradient>
+                  </Pressable>
+                </Link>
+              ) : (
+                <Link href={`/practice/${dance.id}/${lesson.id}`} asChild>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.actionPress,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[colors.cyan, '#3D8BFF']}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={[styles.actionButton, { borderColor: colors.cyan }]}
+                    >
+                      <Text style={styles.actionTitle}>Практика со счётом</Text>
+                      <Text style={styles.actionHint}>Метроном и шаги урока</Text>
+                    </LinearGradient>
+                  </Pressable>
+                </Link>
+              )}
 
-          <Link href={`/pose/${dance.id}/${lesson.id}`} asChild>
-            <Pressable
-              style={({ pressed }) => [styles.actionPress, pressed && styles.pressed]}
-            >
-              <LinearGradient
-                colors={[colors.magenta, colors.coral]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={[styles.actionButton, { borderColor: colors.magenta }]}
-              >
-                <Text style={styles.actionTitle}>
-                  Камера и оценка поз
-                  {poseBestScores[lesson.id]
-                    ? ` · ${poseBestScores[lesson.id]}%`
-                    : ''}
-                </Text>
-                <Text style={styles.actionHint}>Зеркало и тренировка позы</Text>
-              </LinearGradient>
-            </Pressable>
-          </Link>
+              {lesson.runthrough ? null : (
+                <Link href={`/pose/${dance.id}/${lesson.id}`} asChild>
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.actionPress,
+                      pressed && styles.pressed,
+                    ]}
+                  >
+                    <LinearGradient
+                      colors={[colors.magenta, colors.coral]}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={[styles.actionButton, { borderColor: colors.magenta }]}
+                    >
+                      <Text style={styles.actionTitle}>
+                        Камера и оценка поз
+                        {poseBestScores[lesson.id]
+                          ? ` · ${poseBestScores[lesson.id]}%`
+                          : ''}
+                      </Text>
+                      <Text style={styles.actionHint}>
+                        Зеркало и тренировка позы
+                      </Text>
+                    </LinearGradient>
+                  </Pressable>
+                </Link>
+              )}
+            </>
+          ) : null}
 
           <Pressable
             onPress={async () => {
@@ -151,11 +236,21 @@ export default function LessonScreen() {
 }
 
 const styles = StyleSheet.create({
+  stickyPlayer: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    zIndex: 2,
+    elevation: 4,
+  },
+  scroll: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
   },
   backBtn: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   back: {
     fontFamily: fonts.bodyBold,

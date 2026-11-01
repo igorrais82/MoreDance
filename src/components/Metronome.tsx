@@ -8,10 +8,11 @@ import {
   Animated,
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 
+import { Text } from './Text';
+import { useSettings } from '../context/SettingsContext';
 import { colors, fonts, spacing } from '../theme';
 
 const tickSound = require('../../assets/sounds/tick.wav');
@@ -35,6 +36,7 @@ export function Metronome({
   onTick,
 }: Props) {
   const [beat, setBeat] = useState(0);
+  const { soundEnabled, hapticsEnabled } = useSettings();
   const scale = useRef(new Animated.Value(1)).current;
   const onTickRef = useRef(onTick);
   onTickRef.current = onTick;
@@ -55,9 +57,9 @@ export function Metronome({
   }, []);
 
   useEffect(() => {
-    // Classic metronome balance: quieter tocks, stronger first beat
-    tickPlayer.volume = 0.62;
-    accentPlayer.volume = 1;
+    // Soft studio clave: gentle ticks, clearer downbeat
+    tickPlayer.volume = 0.7;
+    accentPlayer.volume = 0.95;
   }, [tickPlayer, accentPlayer]);
 
   useEffect(() => {
@@ -70,17 +72,21 @@ export function Metronome({
     const pulse = (index: number) => {
       const player =
         index === 0 ? accentPlayerRef.current : tickPlayerRef.current;
-      try {
-        player.seekTo(0);
-        player.play();
-      } catch {
-        // ignore playback races
+      if (soundEnabled) {
+        try {
+          player.seekTo(0);
+          player.play();
+        } catch {
+          // ignore playback races
+        }
       }
-      Haptics.impactAsync(
-        index === 0
-          ? Haptics.ImpactFeedbackStyle.Medium
-          : Haptics.ImpactFeedbackStyle.Light,
-      ).catch(() => undefined);
+      if (hapticsEnabled) {
+        Haptics.impactAsync(
+          index === 0
+            ? Haptics.ImpactFeedbackStyle.Medium
+            : Haptics.ImpactFeedbackStyle.Light,
+        ).catch(() => undefined);
+      }
       scale.setValue(1.18);
       Animated.spring(scale, {
         toValue: 1,
@@ -101,7 +107,7 @@ export function Metronome({
     }, intervalMs);
 
     return () => clearInterval(id);
-  }, [bpm, counts.length, running, scale]);
+  }, [bpm, counts.length, running, scale, soundEnabled, hapticsEnabled]);
 
   useEffect(() => {
     if (!running) setBeat(0);

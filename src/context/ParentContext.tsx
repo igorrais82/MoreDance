@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Crypto from 'expo-crypto';
 import React, {
   createContext,
   useCallback,
@@ -8,6 +7,8 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+
+import { sha256Hex } from '../lib/sha256';
 
 const STORAGE_KEY = 'moredance.parent.v1';
 
@@ -40,10 +41,8 @@ const defaultState: ParentState = {
 const ParentContext = createContext<ParentContextValue | null>(null);
 
 async function hashPin(pin: string) {
-  return Crypto.digestStringAsync(
-    Crypto.CryptoDigestAlgorithm.SHA256,
-    `moredance-parent:${pin}`,
-  );
+  // Same digest as the previous expo-crypto call, so saved PINs keep working.
+  return sha256Hex(`moredance-parent:${pin}`);
 }
 
 export function ParentProvider({ children }: { children: React.ReactNode }) {

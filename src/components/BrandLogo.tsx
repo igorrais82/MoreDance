@@ -25,7 +25,7 @@ export function BrandLogo({ size = 220, style, imageStyle }: Props) {
           source={require('../../assets/logo.jpg')}
           style={[styles.image, { width: size, height: size, borderRadius: size / 2 }, imageStyle]}
           resizeMode="cover"
-          accessibilityLabel="Море танцев — MoreDance"
+          accessibilityLabel="Море танцев - MoreDance"
         />
       </View>
     </View>

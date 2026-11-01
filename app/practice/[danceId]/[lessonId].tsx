@@ -2,14 +2,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
+  ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Metronome } from '../../../src/components/Metronome';
 import { StageBackground } from '../../../src/components/StageBackground';
+import { Text } from '../../../src/components/Text';
 import { useProgress } from '../../../src/context/ProgressContext';
 import { getLesson } from '../../../src/data/dances';
 import { colors, fonts, spacing } from '../../../src/theme';
@@ -57,7 +58,7 @@ export default function PracticeScreen() {
     return () => clearInterval(id);
   }, [running]);
 
-  // Flush only on leave — never when progress callbacks change identity
+  // Flush only on leave - never when progress callbacks change identity
   useEffect(() => {
     return () => {
       flushPractice();
@@ -124,68 +125,73 @@ export default function PracticeScreen() {
     <StageBackground>
       <View
         style={[
-          styles.content,
+          styles.screen,
           {
             paddingTop: insets.top + spacing.md,
-            paddingBottom: insets.bottom + spacing.lg,
+            paddingBottom: insets.bottom + spacing.md,
           },
         ]}
       >
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.back}>← К уроку</Text>
-        </Pressable>
-
-        <Text style={[styles.en, { color: dance.accent }]}>{dance.nameEn}</Text>
-        <Text style={styles.title}>{lesson.title}</Text>
-        <Text style={styles.timer}>
-          {mm}:{ss}
-        </Text>
-
-        <View style={styles.metronomeBlock}>
-          <Metronome
-            bpm={lesson.bpm}
-            counts={lesson.counts}
-            accent={dance.accent}
-            running={running}
-            onToggle={toggle}
-            onTick={() => setStepIndex((i) => i + 1)}
-          />
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.back}>← К уроку</Text>
+          </Pressable>
+          <Text style={[styles.en, { color: dance.accent }]}>{dance.nameEn}</Text>
+          <Text style={styles.title}>{lesson.title}</Text>
+          <Text style={styles.timer}>
+            {mm}:{ss}
+          </Text>
         </View>
 
-        <View style={styles.midSpacer} />
-
-        <View
-          style={[
-            styles.cue,
-            cueMinHeight > 0 ? { minHeight: cueMinHeight + 8 } : null,
-          ]}
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          <View style={styles.cueInner}>
-            <Text style={[styles.cueCount, { color: dance.accent }]}>
-              {step.count}
-            </Text>
-            <Text style={styles.cueTitle}>{step.title}</Text>
-            <Text style={styles.cueInstruction}>{step.instruction}</Text>
+          <View style={styles.metronomeBlock}>
+            <Metronome
+              bpm={lesson.bpm}
+              counts={lesson.counts}
+              accent={dance.accent}
+              running={running}
+              onToggle={toggle}
+              onTick={() => setStepIndex((i) => i + 1)}
+            />
           </View>
 
-          {/* Invisible stack: height of the cue = longest step + a little padding */}
-          <View style={styles.cueMeasureLayer} pointerEvents="none">
-            {lesson.steps.map((s, i) => (
-              <View
-                key={`${s.count}-${s.title}-${i}`}
-                style={styles.cueInner}
-                onLayout={(e) => onCueStepLayout(e.nativeEvent.layout.height)}
-              >
-                <Text style={styles.cueCount}>{s.count}</Text>
-                <Text style={styles.cueTitle}>{s.title}</Text>
-                <Text style={styles.cueInstruction}>{s.instruction}</Text>
-              </View>
-            ))}
+          <View
+            style={[
+              styles.cue,
+              cueMinHeight > 0 ? { minHeight: cueMinHeight + 8 } : null,
+            ]}
+          >
+            <View style={styles.cueInner}>
+              <Text style={[styles.cueCount, { color: dance.accent }]}>
+                {step.count}
+              </Text>
+              <Text style={styles.cueTitle}>{step.title}</Text>
+              <Text style={styles.cueInstruction}>{step.instruction}</Text>
+            </View>
+
+            {/* Invisible stack: height of the cue = longest step + a little padding */}
+            <View style={styles.cueMeasureLayer} pointerEvents="none">
+              {lesson.steps.map((s, i) => (
+                <View
+                  key={`${s.count}-${s.title}-${i}`}
+                  style={styles.cueInner}
+                  onLayout={(e) => onCueStepLayout(e.nativeEvent.layout.height)}
+                >
+                  <Text style={styles.cueCount}>{s.count}</Text>
+                  <Text style={styles.cueTitle}>{s.title}</Text>
+                  <Text style={styles.cueInstruction}>{s.instruction}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        </ScrollView>
 
-        <View style={styles.midSpacer} />
-
+        {/* Always pinned above the home indicator - never pushed off-screen */}
         <View style={styles.footer}>
           <Pressable
             onPress={() =>
@@ -215,9 +221,13 @@ export default function PracticeScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: {
+  screen: {
     flex: 1,
     paddingHorizontal: spacing.lg,
+  },
+  header: {
+    flexShrink: 0,
+    marginBottom: spacing.sm,
   },
   backBtn: {
     marginBottom: spacing.sm,
@@ -242,12 +252,17 @@ const styles = StyleSheet.create({
     fontSize: 34,
     color: colors.gold,
     marginTop: 2,
-    marginBottom: spacing.sm,
+  },
+  scroll: {
+    flex: 1,
+    minHeight: 0,
+  },
+  scrollContent: {
+    paddingBottom: spacing.md,
+    gap: spacing.md,
   },
   metronomeBlock: {
     alignItems: 'center',
-    marginBottom: 0,
-    flexShrink: 0,
   },
   cue: {
     backgroundColor: colors.panel,
@@ -256,7 +271,6 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
     overflow: 'hidden',
     alignSelf: 'stretch',
-    flexShrink: 0,
   },
   cueInner: {
     paddingHorizontal: spacing.lg,
@@ -287,13 +301,12 @@ const styles = StyleSheet.create({
     color: colors.muted,
     lineHeight: 24,
   },
-  midSpacer: {
-    flex: 1,
-    minHeight: spacing.sm,
-  },
   footer: {
     gap: 10,
     flexShrink: 0,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
   },
   ghostBtn: {
     borderWidth: 1.5,

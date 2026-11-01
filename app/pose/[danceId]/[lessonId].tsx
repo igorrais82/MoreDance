@@ -5,12 +5,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PoseSilhouette } from '../../../src/components/PoseSilhouette';
+import { Text } from '../../../src/components/Text';
 import { useProgress } from '../../../src/context/ProgressContext';
 import { getLesson } from '../../../src/data/dances';
 import { getLessonMedia } from '../../../src/data/media';
@@ -189,7 +189,7 @@ export default function PoseScreen() {
               <Text style={styles.cardCopy}>
                 Средняя оценка {sessionScore}%.{' '}
                 {sessionScore >= 70
-                  ? 'Урок засчитан — отличная работа!'
+                  ? 'Урок засчитан - отличная работа!'
                   : 'Попробуй ещё раз и удерживай позу ровнее.'}
               </Text>
               <Pressable

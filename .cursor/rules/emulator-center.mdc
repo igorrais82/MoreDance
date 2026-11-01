@@ -1,0 +1,15 @@
+---
+description: Always center Android emulator window after launching it
+alwaysApply: true
+---
+
+# Android emulator placement
+
+Whenever you start or restart the Android emulator for this project:
+
+1. Prefer `powershell -File scripts/start-emulator.ps1` (defaults to AVD `Realme_12_Pro_Plus`).
+2. If you start the emulator any other way, immediately run:
+   `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/center-emulator.ps1 -Retries 24 -DelayMs 500`
+3. Do this every time in this repo — the emulator window must end centered on the primary screen.
+
+Do not leave the emulator window in a corner or off-screen after launch.

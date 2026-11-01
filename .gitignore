@@ -46,3 +46,11 @@ emulator-*.png
 emulator-*.jpg
 emulator-ui*.png
 emulator-ui*.jpg
+/.shots/
+
+# local gradle home used by build scripts
+/.gradle/
+
+# build artifacts
+*.apk
+*.aab

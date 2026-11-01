@@ -18,14 +18,14 @@ export type LessonMedia = {
   pose: PoseGuide;
 };
 
-/** One looping demo video per dance — replace files in assets/videos anytime.
+/** One looping demo video per dance - replace files in assets/videos anytime.
  *
  * Current free Mixkit stock sources (personal/demo use):
- * - waltz:     local — d:\Танцы\Жемчужина Анапы 2026\Артем\1.mp4
- * - cha-cha:   local — d:\Танцы\Жемчужина Анапы 2026\Артем\8.mp4
- * - jive:      local — d:\Танцы\Жемчужина Анапы 2026\Артем\9_1.mp4
- * - quickstep: local — d:\Танцы\Жемчужина Анапы 2026\Артем\3.mp4
- * - samba:     local — d:\Танцы\Жемчужина Анапы 2026\Артем\9_3.mp4
+ * - waltz:     local - d:\Танцы\Жемчужина Анапы 2026\Артем\1.mp4
+ * - cha-cha:   local - d:\Танцы\Жемчужина Анапы 2026\Артем\8.mp4
+ * - jive:      local - d:\Танцы\Жемчужина Анапы 2026\Артем\9_1.mp4
+ * - quickstep: local - d:\Танцы\Жемчужина Анапы 2026\Артем\3.mp4
+ * - samba:     local - d:\Танцы\Жемчужина Анапы 2026\Артем\9_3.mp4
  */
 export const danceVideos: Record<string, number> = {
   waltz: require('../../assets/videos/waltz.mp4'),
@@ -40,31 +40,85 @@ export function getDanceVideo(danceId: string): number | undefined {
 }
 
 export const lessonMedia: Record<string, LessonMedia> = {
-  'waltz-posture': {
-    videoLabel: 'Осанка вальса',
+  'waltz-about': {
+    videoLabel: 'Всё о медленном вальсе',
     pose: {
       stance: 'closed',
       arms: 'frame',
-      cue: 'Встань ровно, руки в рамке, макушка вверх',
+      cue: 'Стойка вальса: спина прямая, рамка мягкая, макушка вверх',
       holdSeconds: 4,
     },
   },
-  'waltz-box': {
-    videoLabel: 'Квадрат вальса',
+  'waltz-small-box': {
+    videoLabel: 'Маленький квадрат',
     pose: {
       stance: 'forward',
       arms: 'frame',
-      cue: 'Шаг вперёд левой, корпус смотрит прямо',
+      cue: 'Правая вперёд, шаг маленький, корпус смотрит прямо',
       holdSeconds: 3,
     },
   },
-  'waltz-rise': {
-    videoLabel: 'Подъём вальса',
+  'waltz-big-box': {
+    videoLabel: 'Большой квадрат',
+    pose: {
+      stance: 'side',
+      arms: 'frame',
+      cue: 'Боковой шаг вместе с поворотом корпуса - смотри на новую сторону зала',
+      holdSeconds: 3,
+    },
+  },
+  'waltz-box-combo': {
+    videoLabel: 'Квадрат вальса',
     pose: {
       stance: 'closed',
       arms: 'frame',
-      cue: 'Полупальцы, мягкий подъём без прыжка',
+      cue: 'Два маленьких квадрата: вперёд, назад, вперёд, назад - без поворотов',
+      holdSeconds: 4,
+    },
+  },
+  'waltz-frame': {
+    videoLabel: 'Рама и построение корпуса',
+    pose: {
+      stance: 'closed',
+      arms: 'frame',
+      cue: 'Плечи вниз, локти на уровне чуть ниже плеч, предплечья параллельно полу',
+      holdSeconds: 5,
+    },
+  },
+  'waltz-rise-fall': {
+    videoLabel: 'Спуски и подъёмы',
+    pose: {
+      stance: 'closed',
+      arms: 'frame',
+      cue: '«Раз» - низко, «два-три» - на полупальцы, макушка вверх',
+      holdSeconds: 4,
+    },
+  },
+  'waltz-natural-turn': {
+    videoLabel: 'Правый поворот',
+    pose: {
+      stance: 'forward',
+      arms: 'frame',
+      cue: 'Правая вперёд с пятки, левая в сторону уже с поворотом, правая вместе',
       holdSeconds: 3,
+    },
+  },
+  'waltz-change': {
+    videoLabel: 'Перемена',
+    pose: {
+      stance: 'forward',
+      arms: 'frame',
+      cue: 'Маленький квадрат: вперёд, в сторону, вместе - без поворота',
+      holdSeconds: 3,
+    },
+  },
+  'waltz-turn-changes': {
+    videoLabel: 'Правый поворот, 2 перемены',
+    pose: {
+      stance: 'closed',
+      arms: 'frame',
+      cue: 'Поворот на два такта, потом две перемены - рама одна и та же',
+      holdSeconds: 4,
     },
   },
   'cha-rhythm': {
@@ -90,7 +144,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     pose: {
       stance: 'side',
       arms: 'side',
-      cue: 'Лёгкий крест ног сзади — замок',
+      cue: 'Лёгкий крест ног сзади - замок',
       holdSeconds: 3,
     },
   },
@@ -135,7 +189,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     pose: {
       stance: 'side',
       arms: 'frame',
-      cue: 'Шаг — вместе — шаг в сторону',
+      cue: 'Шаг - вместе - шаг в сторону',
       holdSeconds: 3,
     },
   },

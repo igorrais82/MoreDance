@@ -19,6 +19,7 @@ type ProgressState = {
   stars: number;
   dancerName: string;
   poseBestScores: Record<string, number>;
+  frameBestSeconds: Record<string, number>;
   cameraPracticeSeconds: number;
 };
 
@@ -28,6 +29,7 @@ type ProgressContextValue = ProgressState & {
   addPracticeSeconds: (seconds: number) => Promise<void>;
   addCameraPracticeSeconds: (seconds: number) => Promise<void>;
   recordPoseScore: (lessonId: string, score: number) => Promise<void>;
+  recordFrameHold: (lessonId: string, seconds: number) => Promise<void>;
   setDancerName: (name: string) => Promise<void>;
   resetProgress: () => Promise<void>;
   isLessonComplete: (lessonId: string) => boolean;
@@ -49,6 +51,7 @@ const defaultState: ProgressState = {
   stars: 0,
   dancerName: 'Танцор',
   poseBestScores: {},
+  frameBestSeconds: {},
   cameraPracticeSeconds: 0,
 };
 
@@ -71,6 +74,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
             ...defaultState,
             ...parsed,
             poseBestScores: parsed.poseBestScores ?? {},
+            frameBestSeconds: parsed.frameBestSeconds ?? {},
           });
         }
       } catch {
@@ -150,6 +154,32 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     [commit],
   );
 
+  const recordFrameHold = useCallback(
+    async (lessonId: string, seconds: number) => {
+      const clamped = Math.max(0, Math.floor(seconds));
+      if (clamped <= 0) return;
+      commit((prev) => {
+        const prevBest = prev.frameBestSeconds[lessonId] ?? 0;
+        if (clamped <= prevBest) return prev;
+        // Звёзды даём за первое пересечение порога, а не за каждый рекорд.
+        const bonus =
+          clamped >= 120 && prevBest < 120
+            ? 4
+            : clamped >= 60 && prevBest < 60
+              ? 3
+              : clamped >= 30 && prevBest < 30
+                ? 2
+                : 0;
+        return {
+          ...prev,
+          frameBestSeconds: { ...prev.frameBestSeconds, [lessonId]: clamped },
+          stars: prev.stars + bonus,
+        };
+      });
+    },
+    [commit],
+  );
+
   const setDancerName = useCallback(
     async (name: string) => {
       commit((prev) => ({
@@ -176,10 +206,12 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     (danceId: string) => {
       const dance = dances.find((d) => d.id === danceId);
       if (!dance) return { done: 0, total: 0 };
-      const done = dance.lessons.filter((l) =>
+      // Прогон - не урок: он не входит в счётчик прогресса.
+      const lessons = dance.lessons.filter((l) => !l.runthrough);
+      const done = lessons.filter((l) =>
         state.completedLessons.includes(l.id),
       ).length;
-      return { done, total: dance.lessons.length };
+      return { done, total: lessons.length };
     },
     [state.completedLessons],
   );
@@ -196,6 +228,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const nextLesson = useMemo(() => {
     for (const dance of dances) {
       for (const lesson of dance.lessons) {
+        if (lesson.runthrough) continue;
         if (!state.completedLessons.includes(lesson.id)) {
           return {
             danceId: dance.id,
@@ -217,6 +250,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       addPracticeSeconds,
       addCameraPracticeSeconds,
       recordPoseScore,
+      recordFrameHold,
       setDancerName,
       resetProgress,
       isLessonComplete,
@@ -233,6 +267,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       addPracticeSeconds,
       addCameraPracticeSeconds,
       recordPoseScore,
+      recordFrameHold,
       setDancerName,
       resetProgress,
       isLessonComplete,
