@@ -52,6 +52,28 @@ npx eas build -p ios --profile preview       # сборка для iPhone (ну�
 Для установки на iPhone вне Expo Go нужен аккаунт Apple Developer (TestFlight или
 устройство, добавленное в профиль сборки).
 
+## Готовая сборка для Android (APK)
+
+Собранный APK лежит в разделе **Releases** этого репозитория:
+
+<https://github.com/igorrais82/MoreDance/releases/latest>
+
+1. Откройте ссылку на телефоне Android.
+2. В блоке **Assets** скачайте файл `MoreDance-1.0.0.apk`.
+3. Разрешите установку из этого источника (телефон спросит один раз) и установите.
+
+APK подписан debug-ключом: для установки на телефон вручную этого достаточно,
+но для публикации в Google Play нужен отдельный keystore.
+
+Собрать APK самому:
+
+```bash
+cd android
+.\gradlew.bat assembleRelease
+```
+
+Файл появится в `android/app/build/outputs/apk/release/`.
+
 ## Стек
 
 Expo (React Native) · Expo Router · AsyncStorage · Reanimated · Google Fonts (Bebas Neue, Nunito) ·
