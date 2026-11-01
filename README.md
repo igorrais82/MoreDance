@@ -65,11 +65,19 @@ npx eas build -p ios --profile preview       # сборка для iPhone (ну�
 APK подписан debug-ключом: для установки на телефон вручную этого достаточно,
 но для публикации в Google Play нужен отдельный keystore.
 
-Собрать APK самому:
+### Сборка своими руками
+
+Надёжнее всего - в облаке: вкладка **Actions** -> workflow **Android APK** ->
+**Run workflow**. Через ~20 минут APK будет в артефактах прогона (`MoreDance-apk`).
+На Windows локальная сборка упирается в лимит длины путей CMake и требует
+включённых длинных путей в реестре.
+
+Локально (Linux/macOS):
 
 ```bash
+npx expo prebuild --platform android
 cd android
-.\gradlew.bat assembleRelease
+./gradlew assembleRelease
 ```
 
 Файл появится в `android/app/build/outputs/apk/release/`.
