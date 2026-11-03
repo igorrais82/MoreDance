@@ -54,3 +54,6 @@ emulator-ui*.jpg
 # build artifacts
 *.apk
 *.aab
+
+# local APK copies and preview images
+/artifacts/

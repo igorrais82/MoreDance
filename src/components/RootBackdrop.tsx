@@ -65,8 +65,9 @@ export function RootBackdrop() {
         </Animated.View>
       ) : null}
       <View style={styles.floorLines}>
-        {Array.from({ length: 8 }).map((_, index) => (
-          <View key={index} style={[styles.floorLine, { top: 80 + index * 70 }]} />
+        {/* Линии «пола сцены»: только в нижней половине, чтобы не резать текст. */}
+        {['58%', '66%', '74%', '82%', '90%'].map((top) => (
+          <View key={top} style={[styles.floorLine, { top }]} />
         ))}
       </View>
     </View>
@@ -127,7 +128,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    opacity: 0.07,
+    opacity: 0.035,
   },
   floorLine: {
     position: 'absolute',

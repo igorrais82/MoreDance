@@ -1,13 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Tabs, usePathname } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
+
+import { TabGlyph } from '../../src/components/icons';
 
 import {
   Gradient,
-  TAB_KEYS,
   TAB_META,
   TabKey,
   isTabLocked,
@@ -23,41 +23,23 @@ function routeToTab(path: string | undefined): TabKey | null {
 
 function TabIcon({
   tab,
-  label,
   focused,
   tint,
   large,
   scale,
 }: {
   tab: TabKey;
-  label: string;
   focused: boolean;
   tint: string;
   large?: boolean;
   scale: number;
 }) {
   const color = focused ? tint : colors.muted;
-  // У ноты узкий глиф, поэтому её рисуем чуть крупнее, чтобы она не казалась меньше.
-  const glyphBoost = tab === 'dances' ? 1.22 : 1;
-  const size = Math.round((large ? 24 : 18) * glyphBoost * Math.min(scale, 1.1));
-
-  // «Танцор» рисуем заливкой, чтобы иконка не отличалась от остальных.
-  if (tab === 'dancer') {
-    return (
-      <View style={styles.iconWrap}>
-        <Svg width={size} height={size} viewBox="0 0 24 24">
-          <Path
-            d="M12 3.2a4.4 4.4 0 1 1 0 8.8 4.4 4.4 0 0 1 0-8.8Zm0 10.4c4.5 0 8.2 2.3 8.2 5.2v2H3.8v-2c0-2.9 3.7-5.2 8.2-5.2Z"
-            fill={color}
-          />
-        </Svg>
-      </View>
-    );
-  }
+  const size = Math.round((large ? 26 : 22) * Math.min(scale, 1.1));
 
   return (
     <View style={styles.iconWrap}>
-      <Text style={[styles.icon, { fontSize: size, color }]}>{label}</Text>
+      <TabGlyph icon={TAB_META[tab].icon} size={size} color={color} />
     </View>
   );
 }
@@ -75,14 +57,14 @@ function TabBarBackground({
   return (
     <View style={[styles.bgFill, styles.bgBase]}>
       <LinearGradient
-        colors={[withAlpha(from.from, 0.35), withAlpha(from.to, 0.35)]}
+        colors={[withAlpha(from.from, 0.22), withAlpha(from.to, 0.22)]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.bgFill}
       />
       <Animated.View style={[styles.bgFill, { opacity: fade }]}>
         <LinearGradient
-          colors={[withAlpha(to.from, 0.35), withAlpha(to.to, 0.35)]}
+          colors={[withAlpha(to.from, 0.22), withAlpha(to.to, 0.22)]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.bgFill}
@@ -172,13 +154,13 @@ export default function TabsLayout() {
               tabBarIcon: ({ focused }) => (
                 <TabIcon
                   tab={key}
-                  label={meta.icon}
                   focused={focused}
                   tint={palette.from}
                   large={isMain}
                   scale={fontScale}
                 />
               ),
+              tabBarAccessibilityLabel: meta.title,
             }}
           />
         );
@@ -200,7 +182,7 @@ const styles = StyleSheet.create({
     paddingTop: 6,
   },
   bgBase: {
-    backgroundColor: '#160A32',
+    backgroundColor: colors.bg,
   },
   bgFill: {
     position: 'absolute',
@@ -220,9 +202,5 @@ const styles = StyleSheet.create({
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  icon: {
-    fontSize: 18,
-    color: colors.muted,
   },
 });

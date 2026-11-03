@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,11 +17,12 @@ import { useProgress } from '../../../src/context/ProgressContext';
 import { getLesson } from '../../../src/data/dances';
 import { getDanceImage } from '../../../src/data/danceImages';
 import { getDanceVideo } from '../../../src/data/media';
-import { colors, fonts, spacing } from '../../../src/theme';
+import { colors, fonts, radius, spacing, type } from '../../../src/theme';
+import { goBack } from '../../../src/lib/nav';
 
 /**
  * Прогон: полторы минуты танца под музыку без остановок.
- * Таймер и подсветка частей идут от темпа урока, музыка - из видео танца.
+ * Таймер и подсветка частей идут от темпа урока, музыка — из видео танца.
  */
 export default function RunthroughScreen() {
   const { danceId, lessonId } = useLocalSearchParams<{
@@ -83,7 +85,7 @@ export default function RunthroughScreen() {
       <StageBackground>
         <View style={{ paddingTop: insets.top + 24, paddingHorizontal: 24 }}>
           <Text style={styles.title}>Прогон недоступен</Text>
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack(router)}>
             <Text style={styles.back}>Назад</Text>
           </Pressable>
         </View>
@@ -166,7 +168,7 @@ export default function RunthroughScreen() {
           styles.screen,
           {
             paddingTop: insets.top + spacing.md,
-            paddingBottom: insets.bottom + spacing.md,
+            paddingBottom: insets.bottom + spacing.lg,
           },
         ]}
       >
@@ -176,7 +178,7 @@ export default function RunthroughScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => goBack(router)} style={styles.backBtn}>
             <Text style={styles.back}>← К уроку</Text>
           </Pressable>
 
@@ -195,9 +197,24 @@ export default function RunthroughScreen() {
                 playsInline
                 allowsVideoFrameAnalysis={false}
               />
+              {/* До первого старта поверх кадра афиша, а не чёрный экран. */}
+              {!running && beats === 0 && !finished ? (
+                <Pressable onPress={start} style={styles.videoPoster}>
+                  {getDanceImage(dance.id) ? (
+                    <Image
+                      source={getDanceImage(dance.id)!}
+                      style={styles.videoPosterImage}
+                      resizeMode="cover"
+                    />
+                  ) : null}
+                  <View style={styles.videoPosterPlay}>
+                    <Text style={styles.videoPosterGlyph}>▶</Text>
+                  </View>
+                </Pressable>
+              ) : null}
               <View style={styles.videoBar}>
                 <Text style={styles.videoLabel} numberOfLines={1}>
-                  Музыка вальса
+                  Музыка: {dance.name}
                 </Text>
                 <Pressable
                   onPress={toggleMute}
@@ -221,10 +238,10 @@ export default function RunthroughScreen() {
             </Text>
             <Text style={styles.timerHint}>
               {finished
-                ? 'Музыка закончилась - прогон пройден'
+                ? 'Музыка закончилась — прогон пройден'
                 : running
                   ? 'Танцуй без остановок: фигура за фигурой по кругу'
-                  : `Длительность прогона ${totalMm}:${totalSs} - нажми «Старт»`}
+                  : `Длительность прогона ${totalMm}:${totalSs} — нажми «Старт»`}
             </Text>
             <View style={styles.progressTrack}>
               <View
@@ -248,7 +265,7 @@ export default function RunthroughScreen() {
             </Text>
             <Text style={styles.partText}>
               {finished
-                ? 'Ты прошла полторы минуты в темпе. Если сбивалась - ничего страшного: на следующем прогоне связка будет держаться ровнее.'
+                ? 'Прогон пройден: весь танец в темпе. Если ритм сбивался — ничего страшного, на следующем прогоне связка будет держаться ровнее.'
                 : (part?.instruction ??
                   'Считай «раз-два-три» на каждую часть и не останавливайся.')}
             </Text>
@@ -324,28 +341,23 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   back: {
-    fontFamily: fonts.bodyBold,
-    color: colors.muted,
-    fontSize: 15,
+    ...type.link,
   },
   en: {
     fontFamily: fonts.brand,
-    fontSize: 18,
+    fontSize: 17,
+    lineHeight: 22,
     letterSpacing: 1,
   },
   title: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 28,
-    color: colors.ink,
+    ...type.screen,
   },
   subtitle: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.muted,
-    marginTop: -4,
+    ...type.bodyMuted,
+    marginTop: 2,
   },
   videoShell: {
-    borderRadius: 18,
+    borderRadius: radius.card,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.line,
@@ -354,130 +366,154 @@ const styles = StyleSheet.create({
   video: {
     width: '100%',
     aspectRatio: 16 / 9,
-    backgroundColor: '#0B0618',
+    backgroundColor: colors.bgElevated,
+  },
+  videoPoster: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    // Полоса «Музыка: ...» идёт ниже кадра, поэтому афиша закрывает только видео.
+    aspectRatio: 16 / 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  videoPosterImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0.5,
+  },
+  videoPosterPlay: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.panel,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+  },
+  videoPosterGlyph: {
+    fontSize: 18,
+    color: colors.ink,
+    marginLeft: 3,
   },
   videoBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
   },
   videoLabel: {
     flex: 1,
-    fontFamily: fonts.bodyExtra,
+    ...type.caption,
     color: colors.ink,
-    fontSize: 14,
   },
   smallBtn: {
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingVertical: 7,
+    borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.line,
-    backgroundColor: 'rgba(247,251,255,0.08)',
+    backgroundColor: colors.panelSoft,
   },
   smallBtnText: {
     fontFamily: fonts.bodyBold,
     color: colors.muted,
     fontSize: 12,
+    lineHeight: 16,
   },
   timerCard: {
-    borderWidth: 2,
-    borderRadius: 24,
+    borderWidth: 1,
+    borderRadius: radius.tile,
     backgroundColor: colors.panel,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
-    gap: 8,
+    gap: spacing.xs,
   },
   timer: {
-    fontFamily: fonts.brand,
-    fontSize: 72,
-    lineHeight: 78,
+    ...type.timer,
   },
   timerHint: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.muted,
+    ...type.small,
     textAlign: 'center',
   },
   progressTrack: {
     alignSelf: 'stretch',
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.track,
     overflow: 'hidden',
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   progressFill: {
     height: '100%',
+    borderRadius: 3,
   },
   partCard: {
-    borderWidth: 2,
-    borderRadius: 18,
-    backgroundColor: colors.panelSoft,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    backgroundColor: colors.panel,
     padding: spacing.md,
-    gap: 6,
+    gap: spacing.xs,
   },
   partLabel: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    ...type.label,
   },
   partTitle: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 24,
+    ...type.section,
+    fontSize: 21,
+    lineHeight: 27,
   },
   partText: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 21,
+    ...type.small,
     color: colors.ink,
   },
   dots: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 4,
+    gap: spacing.xs + 2,
+    marginTop: spacing.xs,
   },
   dot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1.5,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1,
   },
   actions: {
     gap: 10,
   },
   primaryBtn: {
-    borderRadius: 18,
-    paddingVertical: 16,
+    borderRadius: radius.card,
+    paddingVertical: 15,
     alignItems: 'center',
   },
   primaryText: {
-    fontFamily: fonts.bodyExtra,
+    ...type.button,
     color: colors.bg,
-    fontSize: 18,
+    fontSize: 17,
   },
   ghostBtn: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 14,
+    borderRadius: radius.input,
     paddingVertical: 12,
     alignItems: 'center',
+    backgroundColor: colors.panelSoft,
   },
   ghostText: {
-    fontFamily: fonts.bodyBold,
-    color: colors.ink,
-    fontSize: 15,
+    ...type.strong,
   },
   footnote: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.muted,
+    ...type.caption,
     textAlign: 'center',
   },
 });

@@ -29,6 +29,11 @@ type ParentContextValue = ParentState & {
   setDailyGoalMinutes: (minutes: number) => Promise<void>;
   setParentName: (name: string) => Promise<void>;
   changePin: (oldPin: string, newPin: string) => Promise<boolean>;
+  /**
+   * Забыли PIN: код удаляется, кабинет снова просит создать новый.
+   * Прогресс ребёнка при этом не трогается.
+   */
+  resetPin: () => Promise<void>;
 };
 
 const defaultState: ParentState = {
@@ -148,6 +153,10 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
   const isUnlocked =
     state.unlockedUntil != null && state.unlockedUntil > Date.now();
 
+  const resetPin = useCallback(async () => {
+    await persist({ ...state, pinHash: null, unlockedUntil: null });
+  }, [persist, state]);
+
   const value = useMemo<ParentContextValue>(
     () => ({
       ...state,
@@ -160,6 +169,7 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
       setDailyGoalMinutes,
       setParentName,
       changePin,
+      resetPin,
     }),
     [
       state,
@@ -171,6 +181,7 @@ export function ParentProvider({ children }: { children: React.ReactNode }) {
       setDailyGoalMinutes,
       setParentName,
       changePin,
+      resetPin,
     ],
   );
 

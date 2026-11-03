@@ -13,7 +13,7 @@ import {
 
 import { Text } from './Text';
 import { useSettings } from '../context/SettingsContext';
-import { colors, fonts, spacing } from '../theme';
+import { colors, fonts, radius, spacing, type } from '../theme';
 
 const tickSound = require('../../assets/sounds/tick.wav');
 const accentSound = require('../../assets/sounds/tick-accent.wav');
@@ -67,6 +67,7 @@ export function Metronome({
 
     const intervalMs = Math.max(200, Math.round(60000 / bpm));
     let current = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     setBeat(0);
 
     const pulse = (index: number) => {
@@ -99,39 +100,78 @@ export function Metronome({
     // Opening click for the first count shown
     pulse(0);
 
-    const id = setInterval(() => {
-      current = (current + 1) % counts.length;
-      setBeat(current);
-      onTickRef.current?.();
-      pulse(current);
-    }, intervalMs);
+    /**
+     * Планируем каждый удар от абсолютного времени, а не «через setInterval»:
+     * иначе дрейф копится и через минуту счёт расходится с музыкой.
+     */
+    let nextAt = Date.now() + intervalMs;
+    const schedule = () => {
+      const delay = Math.max(0, nextAt - Date.now());
+      timer = setTimeout(() => {
+        current = (current + 1) % counts.length;
+        setBeat(current);
+        onTickRef.current?.();
+        pulse(current);
+        nextAt += intervalMs;
+        // Приложение могли свернуть - тогда не догоняем «пачкой», а начинаем заново.
+        if (Date.now() - nextAt > intervalMs) nextAt = Date.now() + intervalMs;
+        schedule();
+      }, delay);
+    };
+    schedule();
 
-    return () => clearInterval(id);
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
   }, [bpm, counts.length, running, scale, soundEnabled, hapticsEnabled]);
 
   useEffect(() => {
     if (!running) setBeat(0);
   }, [running]);
 
+  /**
+   * Счёт может быть словом («Slow», «Quick»), а не только цифрой.
+   * Длинную подпись уменьшаем, чтобы она не выходила за круг.
+   */
+  const countLabel = running ? counts[beat] : '♪';
+  const countSize =
+    countLabel.length <= 2 ? 84 : countLabel.length <= 4 ? 64 : 50;
+
   return (
     <View style={styles.wrap}>
-      <Animated.View
-        style={[
-          styles.pulse,
-          {
-            borderColor: accent,
-            transform: [{ scale }],
-            shadowColor: accent,
-          },
-        ]}
+      <Pressable
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityLabel={running ? 'Пауза, остановить счёт' : 'Начать счёт под метроном'}
+        accessibilityState={{ busy: running }}
+        style={({ pressed }) => pressed && styles.pressed}
       >
-        <Text style={[styles.count, { color: accent }]}>
-          {running ? counts[beat] : '♪'}
-        </Text>
-        <Text style={styles.bpm}>{bpm} BPM</Text>
-      </Animated.View>
+        <Animated.View
+          style={[
+            styles.pulse,
+            {
+              borderColor: accent,
+              transform: [{ scale }],
+              shadowColor: accent,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.count,
+              { color: accent, fontSize: countSize, lineHeight: countSize + 6 },
+            ]}
+          >
+            {countLabel}
+          </Text>
+          <Text style={styles.bpm}>{bpm} BPM</Text>
+        </Animated.View>
+      </Pressable>
 
-      <View style={styles.beats}>
+      <View
+        style={styles.beats}
+        accessibilityLabel={`Доля ${beat + 1} из ${counts.length}`}
+      >
         {counts.map((c, i) => (
           <View
             key={`${c}-${i}`}
@@ -148,6 +188,8 @@ export function Metronome({
 
       <Pressable
         onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityLabel={running ? 'Пауза' : 'Запустить счёт'}
         style={({ pressed }) => [
           styles.button,
           { backgroundColor: accent, opacity: pressed ? 0.85 : 1 },
@@ -155,6 +197,9 @@ export function Metronome({
       >
         <Text style={styles.buttonText}>{running ? 'Пауза' : 'Счёт'}</Text>
       </Pressable>
+      <Text style={styles.hint}>
+        {running ? 'Счёт идёт — шагай в такт' : 'Нажми на круг или на кнопку, чтобы начать'}
+      </Text>
     </View>
   );
 }
@@ -162,51 +207,56 @@ export function Metronome({
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm + 2,
   },
   pulse: {
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    borderWidth: 3,
+    width: 216,
+    height: 216,
+    borderRadius: 108,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.panel,
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
   count: {
     fontFamily: fonts.brand,
-    fontSize: 88,
-    lineHeight: 92,
+    fontSize: 84,
+    lineHeight: 90,
   },
   bpm: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 14,
+    ...type.caption,
     marginTop: 2,
   },
   beats: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.xs + 2,
   },
   beatDot: {
-    width: 10,
-    height: 10,
+    width: 9,
+    height: 9,
     borderRadius: 5,
   },
   button: {
     paddingHorizontal: 36,
-    paddingVertical: 14,
-    borderRadius: 18,
+    paddingVertical: 13,
+    borderRadius: radius.card,
     minWidth: 160,
     alignItems: 'center',
   },
   buttonText: {
-    fontFamily: fonts.bodyExtra,
+    ...type.button,
     color: colors.bg,
-    fontSize: 18,
+  },
+  hint: {
+    ...type.caption,
+    textAlign: 'center',
+    maxWidth: 280,
+  },
+  pressed: {
+    opacity: 0.9,
   },
 });

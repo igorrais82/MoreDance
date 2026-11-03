@@ -18,11 +18,12 @@ import {
   formatHold,
   frameRating,
 } from '../../../src/lib/frame';
-import { colors, fonts, spacing } from '../../../src/theme';
+import { colors, fonts, radius, spacing, type } from '../../../src/theme';
+import { goBack } from '../../../src/lib/nav';
 
 /**
  * «Держание рамы»: таймер, который копит время, пока руки стоят в закрытой
- * раме. Опустил руки - пауза, и приложение показывает результат с оценкой.
+ * раме. Опустил руки — пауза, и приложение показывает результат с оценкой.
  */
 export default function FrameHoldScreen() {
   const { danceId, lessonId } = useLocalSearchParams<{
@@ -65,7 +66,7 @@ export default function FrameHoldScreen() {
       <StageBackground>
         <View style={{ paddingTop: insets.top + 24, paddingHorizontal: 24 }}>
           <Text style={styles.title}>Урок не найден</Text>
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack(router)}>
             <Text style={styles.back}>Назад</Text>
           </Pressable>
         </View>
@@ -80,7 +81,7 @@ export default function FrameHoldScreen() {
   const isRecord = result != null && result > bestAtStart.current;
 
   const start = () => {
-    // Каждая попытка считается с нуля: «Продолжить» - это новый подход,
+    // Каждая попытка считается с нуля: «Продолжить» — это новый подход,
     // а не накопление времени поверх предыдущего результата.
     bestAtStart.current = best;
     accrued.current = 0;
@@ -129,7 +130,7 @@ export default function FrameHoldScreen() {
           styles.screen,
           {
             paddingTop: insets.top + spacing.md,
-            paddingBottom: insets.bottom + spacing.md,
+            paddingBottom: insets.bottom + spacing.lg,
           },
         ]}
       >
@@ -139,7 +140,12 @@ export default function FrameHoldScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
         >
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable
+            onPress={() => goBack(router)}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Назад к уроку"
+          >
             <Text style={styles.back}>← К уроку</Text>
           </Pressable>
 
@@ -153,13 +159,17 @@ export default function FrameHoldScreen() {
               {running
                 ? 'Держи раму: плечи вниз, локти не провисают'
                 : result != null
-                  ? `Результат: ${formatHold(result)} - отдыхай и повторяй`
+                  ? `Результат: ${formatHold(result)} — отдыхай и повторяй`
                   : 'Нажми «Держать раму» и включи таймер'}
             </Text>
           </View>
 
           <Pressable
             onPress={running ? pause : start}
+            accessibilityRole="button"
+            accessibilityLabel={
+              running ? 'Пауза, остановить таймер' : result != null ? 'Ещё раз' : 'Держать раму, запустить таймер'
+            }
             style={({ pressed }) => [
               styles.primaryBtn,
               {
@@ -193,12 +203,12 @@ export default function FrameHoldScreen() {
             <Text style={styles.howText}>
               Построй раму по шагам урока и включи таймер. Держи руки
               неподвижно, дыши ровно. Опустил руки, ссутулился или поднял
-              плечи - сразу жми «Пауза»: приложение покажет удержанное время и
+              плечи — сразу жми «Пауза»: приложение покажет удержанное время и
               оценку.
             </Text>
             <Text style={styles.howText}>
-              Меньше 10 секунд - «мало», от 30 секунд - уже зачётный результат,
-              а две-три минуты - «отлично» и «блестяще».
+              Меньше 10 секунд — «мало», от 30 секунд — уже зачётный результат,
+              а две-три минуты — «отлично» и «блестяще».
             </Text>
             {best > 0 ? (
               <Text style={[styles.best, { color: dance.accent }]}>
@@ -211,6 +221,8 @@ export default function FrameHoldScreen() {
             {elapsed > 0 && !running ? (
               <Pressable
                 onPress={reset}
+                accessibilityRole="button"
+                accessibilityLabel="Сбросить таймер"
                 style={({ pressed }) => [
                   styles.ghostBtn,
                   pressed && { opacity: 0.85 },
@@ -221,6 +233,10 @@ export default function FrameHoldScreen() {
             ) : null}
             <Pressable
               onPress={() => completeLesson(lesson.id)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                done ? 'Урок уже отмечен выполненным' : 'Отметить урок выполненным, плюс три звезды'
+              }
               style={({ pressed }) => [
                 styles.doneBtn,
                 done && styles.doneBtnDone,
@@ -254,62 +270,53 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   back: {
-    fontFamily: fonts.bodyBold,
-    color: colors.muted,
-    fontSize: 15,
+    ...type.link,
   },
   en: {
     fontFamily: fonts.brand,
-    fontSize: 18,
+    fontSize: 17,
+    lineHeight: 22,
     letterSpacing: 1,
   },
   title: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 28,
-    color: colors.ink,
+    ...type.screen,
   },
   subtitle: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.muted,
-    marginTop: -4,
+    ...type.bodyMuted,
+    marginTop: 2,
   },
   timerCard: {
-    borderWidth: 2,
-    borderRadius: 24,
+    borderWidth: 1,
+    borderRadius: radius.tile,
     backgroundColor: colors.panel,
     paddingVertical: spacing.lg,
     alignItems: 'center',
   },
   timer: {
-    fontFamily: fonts.brand,
-    fontSize: 72,
-    lineHeight: 78,
+    ...type.timer,
     color: colors.gold,
   },
   timerHint: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.muted,
+    ...type.small,
     textAlign: 'center',
     paddingHorizontal: spacing.lg,
   },
   primaryBtn: {
-    borderRadius: 18,
-    paddingVertical: 16,
+    borderRadius: radius.card,
+    paddingVertical: 15,
     alignItems: 'center',
   },
   primaryText: {
-    fontFamily: fonts.bodyExtra,
+    ...type.button,
     color: colors.bg,
-    fontSize: 18,
+    fontSize: 17,
   },
   ratingCard: {
-    borderWidth: 2,
-    borderRadius: 18,
-    backgroundColor: colors.panelSoft,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    backgroundColor: colors.panel,
     padding: spacing.md,
-    gap: 6,
+    gap: spacing.xs,
   },
   ratingTop: {
     flexDirection: 'row',
@@ -317,75 +324,65 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   ratingLabel: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 24,
+    ...type.section,
   },
   ratingTime: {
     fontFamily: fonts.brand,
-    fontSize: 26,
+    fontSize: 24,
+    lineHeight: 30,
     color: colors.ink,
   },
   ratingHint: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 21,
+    ...type.small,
     color: colors.ink,
   },
   record: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 14,
+    ...type.label,
     color: colors.gold,
   },
   howCard: {
     backgroundColor: colors.panel,
-    borderRadius: 18,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.line,
     padding: spacing.md,
-    gap: 8,
+    gap: spacing.xs,
   },
   howTitle: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 16,
-    color: colors.ink,
+    ...type.cardTitle,
   },
   howText: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.muted,
+    ...type.small,
   },
   best: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 14,
+    ...type.strong,
   },
   actions: {
     gap: 10,
   },
   ghostBtn: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 14,
+    borderRadius: radius.input,
     paddingVertical: 12,
     alignItems: 'center',
+    backgroundColor: colors.panelSoft,
   },
   ghostText: {
-    fontFamily: fonts.bodyBold,
-    color: colors.ink,
-    fontSize: 15,
+    ...type.strong,
   },
   doneBtn: {
-    backgroundColor: colors.coral,
-    borderRadius: 14,
+    backgroundColor: colors.mint,
+    borderRadius: radius.input,
     paddingVertical: 14,
     alignItems: 'center',
   },
   doneBtnDone: {
     backgroundColor: colors.mint,
+    opacity: 0.7,
   },
   doneText: {
-    fontFamily: fonts.bodyExtra,
-    color: colors.ink,
-    fontSize: 15,
+    ...type.button,
+    color: colors.bg,
   },
 });

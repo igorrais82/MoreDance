@@ -2,13 +2,13 @@ import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BrandLogo } from '../../src/components/BrandLogo';
 import { DanceTile } from '../../src/components/DanceTile';
+import { ScreenHeader } from '../../src/components/ScreenHeader';
 import { StageBackground } from '../../src/components/StageBackground';
 import { Text } from '../../src/components/Text';
 import { useProgress } from '../../src/context/ProgressContext';
 import { dances } from '../../src/data/dances';
-import { colors, fonts, spacing } from '../../src/theme';
+import { spacing, type } from '../../src/theme';
 
 export default function DancesScreen() {
   const insets = useSafeAreaInsets();
@@ -22,17 +22,21 @@ export default function DancesScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 28 },
+          {
+            paddingTop: insets.top + spacing.lg,
+            // Запас под плавающую панель вкладок.
+            paddingBottom: insets.bottom + 108,
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <BrandLogo size={72} style={styles.logo} />
-        <Text style={styles.title}>Каталог танцев</Text>
-        <Text style={styles.copy}>
-          Выбери танец, открой урок и потренируй фигуры под счёт.
-        </Text>
+        <ScreenHeader
+          logo
+          title="Каталог танцев"
+          subtitle="Выбери танец, открой урок и потренируй фигуры под счёт."
+        />
 
-        <Text style={styles.group}>Стандарт</Text>
+        <Text style={[type.section, styles.group]}>Стандарт</Text>
         {standard.map((dance) => (
           <DanceTile
             key={dance.id}
@@ -41,7 +45,7 @@ export default function DancesScreen() {
           />
         ))}
 
-        <Text style={[styles.group, { marginTop: spacing.md }]}>Латина</Text>
+        <Text style={[type.section, styles.group, styles.groupSpaced]}>Латина</Text>
         {latin.map((dance) => (
           <DanceTile
             key={dance.id}
@@ -49,7 +53,7 @@ export default function DancesScreen() {
             progress={danceProgress(dance.id)}
           />
         ))}
-        <View style={{ height: 12 }} />
+        <View style={styles.tail} />
       </ScrollView>
     </StageBackground>
   );
@@ -59,31 +63,13 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
   },
-  logo: {
-    alignSelf: 'flex-start',
-    marginBottom: 8,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,245,255,0.4)',
-  },
-  title: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 28,
-    color: colors.ink,
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  copy: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: spacing.lg,
-  },
   group: {
-    fontFamily: fonts.brand,
-    fontSize: 22,
-    color: colors.ink,
     marginBottom: spacing.sm,
-    letterSpacing: 0.5,
+  },
+  groupSpaced: {
+    marginTop: spacing.md,
+  },
+  tail: {
+    height: spacing.xs,
   },
 });

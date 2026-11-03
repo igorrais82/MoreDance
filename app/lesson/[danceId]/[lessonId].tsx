@@ -1,23 +1,21 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LessonVideo } from '../../../src/components/LessonVideo';
 import { StageBackground } from '../../../src/components/StageBackground';
 import { Text } from '../../../src/components/Text';
+import { CameraIcon, CheckIcon } from '../../../src/components/icons';
 import { useProgress } from '../../../src/context/ProgressContext';
 import { getLesson } from '../../../src/data/dances';
 import { getDanceVideo, getLessonMedia } from '../../../src/data/media';
 import { getDanceImage } from '../../../src/data/danceImages';
+import { withAlpha } from '../../../src/lib/color';
 import { formatHold } from '../../../src/lib/frame';
-import { colors, fonts, spacing } from '../../../src/theme';
+import { colors, fonts, radius, spacing, type } from '../../../src/theme';
+import { goBack } from '../../../src/lib/nav';
 
 export default function LessonScreen() {
   const { danceId, lessonId } = useLocalSearchParams<{
@@ -28,20 +26,19 @@ export default function LessonScreen() {
   const media = getLessonMedia(lessonId);
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const {
-    completeLesson,
-    isLessonComplete,
-    poseBestScores,
-    frameBestSeconds,
-  } = useProgress();
+  const { completeLesson, isLessonComplete, frameBestSeconds } = useProgress();
 
   if (!data) {
     return (
       <StageBackground>
         <View style={{ paddingTop: insets.top + 24, paddingHorizontal: 24 }}>
           <Text style={styles.title}>Урок не найден</Text>
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.back}>Назад</Text>
+          <Pressable
+            onPress={() => goBack(router)}
+            accessibilityRole="button"
+            accessibilityLabel="Назад"
+          >
+            <Text style={styles.back}>← Назад</Text>
           </Pressable>
         </View>
       </StageBackground>
@@ -53,23 +50,50 @@ export default function LessonScreen() {
   const done = isLessonComplete(lesson.id);
   const videoSource = media?.videoSource ?? getDanceVideo(dance.id);
 
+  /**
+   * Основное действие урока повторяется внизу липкой панелью: раньше оно
+   * пряталось после четырёх экранов текста, и до него никто не доскролливал.
+   */
+  const primary = lesson.runthrough
+    ? {
+        href: `/runthrough/${dance.id}/${lesson.id}`,
+        title: 'Прогон под музыку',
+        hint: 'Полторы минуты без остановок',
+        colors: [colors.gold, '#FF9F1A'] as const,
+      }
+    : lesson.frameHold
+      ? {
+          href: `/frame/${dance.id}/${lesson.id}`,
+          title: 'Держание рамы',
+          hint: frameBestSeconds[lesson.id]
+            ? `Рекорд ${formatHold(frameBestSeconds[lesson.id])}`
+            : 'Таймер удержания',
+          colors: [colors.sky, colors.blue] as const,
+        }
+      : {
+          href: `/practice/${dance.id}/${lesson.id}`,
+          title: 'Практика со счётом',
+          hint: 'Метроном и шаги урока',
+          colors: [colors.sky, colors.blue] as const,
+        };
+
   return (
     <StageBackground>
-      {/* Fixed player: does not move while steps/actions scroll. */}
-      <View
-        style={[
-          styles.stickyPlayer,
-          { paddingTop: insets.top + spacing.sm },
-        ]}
-      >
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <Pressable
+          onPress={() => goBack(router)}
+          accessibilityRole="button"
+          accessibilityLabel={`Назад к танцу ${dance.name}`}
+          style={styles.backBtn}
+        >
           <Text style={styles.back}>← {dance.name}</Text>
         </Pressable>
         {videoSource != null ? (
           <LessonVideo
-            label={media?.videoLabel ?? dance.name}
+            label={`${dance.name} · демонстрация`}
             source={videoSource}
             poster={getDanceImage(dance.id)}
+            startCollapsed
           />
         ) : null}
       </View>
@@ -78,13 +102,20 @@ export default function LessonScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: insets.bottom + 36 },
+          { paddingBottom: insets.bottom + 108 },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <Text style={[styles.en, { color: accent }]}>{dance.nameEn}</Text>
         <Text style={[styles.title, lesson.runthrough && { color: accent }]}>
           {lesson.title}
+        </Text>
+        <Text style={styles.meta}>
+          {lesson.runthrough ? 'Прогон' : `Урок · ${lesson.durationMin} мин`} ·{' '}
+          {lesson.bpm} BPM
+          {frameBestSeconds[lesson.id]
+            ? ` · рекорд удержания ${formatHold(frameBestSeconds[lesson.id])}`
+            : ''}
         </Text>
         <Text style={styles.summary}>{lesson.summary}</Text>
 
@@ -107,140 +138,102 @@ export default function LessonScreen() {
             <View style={[styles.countBubble, { backgroundColor: accent }]}>
               <Text style={styles.countText}>{step.count}</Text>
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.stepBody}>
               <Text style={styles.stepTitle}>{step.title}</Text>
               <Text style={styles.stepInstruction}>{step.instruction}</Text>
             </View>
           </View>
         ))}
 
-        <View style={styles.actions}>
-          {!lesson.theory ? (
-            <>
-              {lesson.runthrough ? (
-                <Link href={`/runthrough/${dance.id}/${lesson.id}`} asChild>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.actionPress,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={['#FFD84A', '#FF9F1A']}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={[styles.actionButton, { borderColor: colors.gold }]}
-                    >
-                      <Text style={styles.actionTitle}>Прогон под музыку</Text>
-                      <Text style={styles.actionHint}>
-                        Полторы минуты под музыку без остановок
-                      </Text>
-                    </LinearGradient>
-                  </Pressable>
-                </Link>
-              ) : lesson.frameHold ? (
-                <Link href={`/frame/${dance.id}/${lesson.id}`} asChild>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.actionPress,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={[colors.cyan, '#3D8BFF']}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={[styles.actionButton, { borderColor: colors.cyan }]}
-                    >
-                      <Text style={styles.actionTitle}>
-                        Держание рамы
-                        {frameBestSeconds[lesson.id]
-                          ? ` · рекорд ${formatHold(frameBestSeconds[lesson.id])}`
-                          : ''}
-                      </Text>
-                      <Text style={styles.actionHint}>
-                        Таймер удержания с оценкой результата
-                      </Text>
-                    </LinearGradient>
-                  </Pressable>
-                </Link>
-              ) : (
-                <Link href={`/practice/${dance.id}/${lesson.id}`} asChild>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.actionPress,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={[colors.cyan, '#3D8BFF']}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={[styles.actionButton, { borderColor: colors.cyan }]}
-                    >
-                      <Text style={styles.actionTitle}>Практика со счётом</Text>
-                      <Text style={styles.actionHint}>Метроном и шаги урока</Text>
-                    </LinearGradient>
-                  </Pressable>
-                </Link>
-              )}
-
-              {lesson.runthrough ? null : (
-                <Link href={`/pose/${dance.id}/${lesson.id}`} asChild>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.actionPress,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={[colors.magenta, colors.coral]}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={[styles.actionButton, { borderColor: colors.magenta }]}
-                    >
-                      <Text style={styles.actionTitle}>
-                        Камера и оценка поз
-                        {poseBestScores[lesson.id]
-                          ? ` · ${poseBestScores[lesson.id]}%`
-                          : ''}
-                      </Text>
-                      <Text style={styles.actionHint}>
-                        Зеркало и тренировка позы
-                      </Text>
-                    </LinearGradient>
-                  </Pressable>
-                </Link>
-              )}
-            </>
-          ) : null}
-
-          <Pressable
-            onPress={async () => {
-              await completeLesson(lesson.id);
-            }}
-            style={({ pressed }) => [
-              styles.secondary,
-              done && styles.secondaryDone,
-              pressed && styles.pressed,
-            ]}
-          >
-            <Text style={styles.secondaryText}>
-              {done ? '★ Урок отмечен' : 'Отметить урок выполненным (+3 ★)'}
-            </Text>
-          </Pressable>
+        <View style={styles.notes}>
+          <Text style={styles.note}>
+            Демонстрация в ролике — танец целиком, одна на все уроки танца.
+            Фигуру этого урока ищи в шагах выше.
+          </Text>
         </View>
       </ScrollView>
+
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: insets.bottom + spacing.sm },
+        ]}
+      >
+        {!lesson.theory ? (
+          <>
+            <Pressable
+              onPress={() => router.push(primary.href)}
+              accessibilityRole="button"
+              accessibilityLabel={`${primary.title}. ${primary.hint}`}
+              style={({ pressed }) => [styles.primaryPress, pressed && styles.pressed]}
+            >
+              <LinearGradient
+                colors={[...primary.colors]}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={styles.primary}
+              >
+                <Text style={[styles.primaryTitle, { color: colors.bg }]}>
+                  {primary.title}
+                </Text>
+                <Text style={[styles.primaryHint, { color: colors.bg }]}>
+                  {primary.hint}
+                </Text>
+              </LinearGradient>
+            </Pressable>
+            {lesson.runthrough ? null : (
+              <Pressable
+                onPress={() => router.push(`/pose/${dance.id}/${lesson.id}`)}
+                accessibilityRole="button"
+                accessibilityLabel="Зеркало: потренировать позу"
+                style={({ pressed }) => [
+                  styles.iconAction,
+                  { borderColor: accent },
+                  pressed && styles.pressed,
+                ]}
+              >
+                <CameraIcon size={22} color={accent} />
+              </Pressable>
+            )}
+          </>
+        ) : null}
+        <Pressable
+          onPress={async () => {
+            await completeLesson(lesson.id);
+          }}
+          disabled={done}
+          accessibilityRole="button"
+          accessibilityLabel={
+            done ? 'Урок уже отмечен выполненным' : 'Отметить урок выполненным, плюс три звезды'
+          }
+          style={({ pressed }) => [
+            styles.iconAction,
+            done && styles.iconActionDone,
+            pressed && !done && styles.pressed,
+          ]}
+        >
+          <CheckIcon size={22} color={done ? colors.mint : colors.ink} />
+        </Pressable>
+      </View>
     </StageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  stickyPlayer: {
+  header: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
     zIndex: 2,
     elevation: 4,
+  },
+  backBtn: {
+    alignSelf: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  back: {
+    ...type.link,
   },
   scroll: {
     flex: 1,
@@ -249,143 +242,130 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
   },
-  backBtn: {
-    marginBottom: spacing.sm,
-  },
-  back: {
-    fontFamily: fonts.bodyBold,
-    color: colors.muted,
-    fontSize: 15,
-  },
   en: {
     fontFamily: fonts.brand,
-    fontSize: 20,
+    fontSize: 17,
+    lineHeight: 22,
     letterSpacing: 1,
   },
   title: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 30,
-    color: colors.ink,
-    marginTop: 4,
-    marginBottom: 8,
+    ...type.screen,
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  meta: {
+    ...type.caption,
+    marginBottom: spacing.sm,
   },
   summary: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 16,
-    lineHeight: 24,
+    ...type.bodyMuted,
     marginBottom: spacing.md,
   },
   tip: {
-    borderWidth: 1.5,
-    borderRadius: 16,
+    borderWidth: 1,
+    borderRadius: radius.card,
     padding: spacing.md,
-    marginBottom: spacing.lg,
     backgroundColor: colors.panel,
+    marginBottom: spacing.lg,
+    gap: 2,
   },
   tipLabel: {
-    fontFamily: fonts.bodyExtra,
+    ...type.label,
     color: colors.gold,
-    fontSize: 13,
-    marginBottom: 4,
   },
   tipText: {
-    fontFamily: fonts.body,
-    color: colors.ink,
-    fontSize: 15,
-    lineHeight: 22,
+    ...type.body,
   },
   section: {
-    fontFamily: fonts.brand,
-    fontSize: 24,
-    color: colors.ink,
+    ...type.section,
     marginBottom: spacing.sm,
   },
   step: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.sm,
     marginBottom: spacing.md,
-    alignItems: 'flex-start',
   },
   countBubble: {
     minWidth: 52,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 14,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
   },
   countText: {
-    fontFamily: fonts.bodyExtra,
+    fontFamily: fonts.brand,
+    fontSize: 17,
+    lineHeight: 21,
     color: colors.bg,
-    fontSize: 13,
-    textAlign: 'center',
+  },
+  stepBody: {
+    flex: 1,
   },
   stepTitle: {
-    fontFamily: fonts.bodyExtra,
-    color: colors.ink,
-    fontSize: 17,
-    marginBottom: 4,
+    ...type.cardTitle,
+    marginBottom: 2,
   },
   stepInstruction: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 14,
-    lineHeight: 21,
+    ...type.body,
   },
-  actions: {
-    marginTop: spacing.md,
-    gap: 12,
+  notes: {
+    marginTop: spacing.sm,
   },
-  actionPress: {
-    borderRadius: 18,
+  note: {
+    ...type.caption,
+  },
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    backgroundColor: colors.overlay,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  primaryPress: {
+    flex: 1,
+    borderRadius: radius.card,
     overflow: 'hidden',
-    shadowColor: colors.cyan,
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 7,
   },
-  actionButton: {
-    minHeight: 64,
-    borderRadius: 18,
-    borderWidth: 2,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+  primary: {
+    flex: 1,
+    borderRadius: radius.card,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    justifyContent: 'center',
+    minHeight: 56,
+  },
+  primaryTitle: {
+    ...type.button,
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.bg,
+  },
+  primaryHint: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    lineHeight: 15,
+    opacity: 0.9,
+  },
+  iconAction: {
+    width: 56,
+    minHeight: 56,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    backgroundColor: colors.panel,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionTitle: {
-    fontFamily: fonts.bodyExtra,
-    color: colors.ink,
-    fontSize: 17,
-    textAlign: 'center',
-  },
-  actionHint: {
-    fontFamily: fonts.body,
-    color: 'rgba(247,251,255,0.85)',
-    fontSize: 13,
-    marginTop: 4,
-    textAlign: 'center',
+  iconActionDone: {
+    borderColor: colors.mint,
+    backgroundColor: withAlpha(colors.mint, 0.16),
   },
   pressed: {
     opacity: 0.88,
-    transform: [{ scale: 0.98 }],
-  },
-  secondary: {
-    borderRadius: 16,
-    paddingVertical: 14,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: colors.line,
-    backgroundColor: colors.panel,
-  },
-  secondaryDone: {
-    borderColor: colors.mint,
-    backgroundColor: 'rgba(46,230,197,0.12)',
-  },
-  secondaryText: {
-    fontFamily: fonts.bodyBold,
-    color: colors.ink,
-    fontSize: 14,
+    transform: [{ scale: 0.985 }],
   },
 });

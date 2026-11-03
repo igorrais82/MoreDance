@@ -75,7 +75,7 @@ export function PoseSilhouette({
           <View style={[styles.leg, { backgroundColor: accent }]} />
         </View>
       </View>
-      <View style={[styles.floorOval, { borderColor: accent }]} />
+      <View style={[styles.floorOval, { backgroundColor: accent }]} />
     </View>
   );
 }
@@ -129,11 +129,11 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   floorOval: {
-    width: 120,
-    height: 28,
-    borderRadius: 60,
-    borderWidth: 2,
-    marginTop: 4,
-    opacity: 0.5,
+    // Мягкая тень на полу, а не «пустая кнопка» под фигурой.
+    width: 140,
+    height: 16,
+    borderRadius: 70,
+    marginTop: 2,
+    opacity: 0.14,
   },
 });

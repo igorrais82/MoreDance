@@ -1,33 +1,41 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Animated,
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text as RNText,
-  View,
-} from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BrandLogo } from '../../src/components/BrandLogo';
+import { Segmented } from '../../src/components/Chip';
 import { PerformancesList } from '../../src/components/PerformancesList';
 import { StageBackground } from '../../src/components/StageBackground';
 import { Text } from '../../src/components/Text';
+import { GearIcon } from '../../src/components/icons';
 import { useDancer } from '../../src/context/DancerContext';
+import { useParent } from '../../src/context/ParentContext';
 import { useProgress } from '../../src/context/ProgressContext';
-import { getDanceImage } from '../../src/data/danceImages';
-import { dances } from '../../src/data/dances';
-import { colors, fonts, spacing } from '../../src/theme';
+import { useSettings } from '../../src/context/SettingsContext';
+import { withAlpha } from '../../src/lib/color';
+import { plural } from '../../src/lib/plural';
+import { colors, fonts, radius, spacing, type } from '../../src/theme';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [view, setView] = useState<'scene' | 'performances'>('scene');
-  const { dancerName, stars, level, nextLesson, completedLessons } = useProgress();
+  const {
+    dancerName,
+    stars,
+    rank,
+    nextLesson,
+    completedLessons,
+    todayPracticeSeconds,
+    streakDays,
+    totalLessons,
+  } = useProgress();
   const dancer = useDancer();
+  const parent = useParent();
+  const { palettes, activeTab } = useSettings();
+  const accent = (palettes[activeTab] ?? palettes.index).from;
   const greeting = dancer.firstName || dancerName;
   const glow = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(0)).current;
@@ -58,181 +66,177 @@ export default function HomeScreen() {
 
   const spotlightOpacity = glow.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.35, 0.7],
+    outputRange: [0.3, 0.6],
   });
+
+  const goalSeconds = Math.max(parent.dailyGoalMinutes, 1) * 60;
+  const todayRatio = Math.min(1, todayPracticeSeconds / goalSeconds);
+  const todayMinutes = Math.floor(todayPracticeSeconds / 60);
 
   return (
     <StageBackground>
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          // Верхний отступ оставляет место крупной кнопке настроек.
-          { paddingTop: insets.top + 96, paddingBottom: insets.bottom + 32 },
+          {
+            paddingTop: insets.top + 72,
+            // Полоса под плавающей панелью: контент не уезжает под вкладки.
+            paddingBottom: insets.bottom + 108,
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.segments}>
-          <Pressable
-            onPress={() => setView('scene')}
-            style={[styles.segment, view === 'scene' && styles.segmentActive]}
-          >
-            <Text style={[styles.segmentText, view === 'scene' && styles.segmentTextActive]}>
-              Сцена
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setView('performances')}
-            style={[styles.segment, view === 'performances' && styles.segmentActive]}
-          >
-            <Text
-              style={[
-                styles.segmentText,
-                view === 'performances' && styles.segmentTextActive,
-              ]}
-            >
-              Выступления и разное
-            </Text>
-          </Pressable>
+          <Segmented
+            options={[
+              { key: 'scene' as const, label: 'Сцена' },
+              { key: 'performances' as const, label: 'Афиша' },
+            ]}
+            value={view}
+            onChange={setView}
+            accent={accent}
+          />
         </View>
 
         {view === 'performances' ? (
           <PerformancesList />
         ) : (
           <>
-        <Animated.View
-          style={{
-            opacity: rise,
-            transform: [
-              {
-                translateY: rise.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [24, 0],
-                }),
-              },
-            ],
-          }}
-        >
-          <View style={styles.hero}>
-            <Animated.View style={[styles.heroGlow, { opacity: spotlightOpacity }]} />
-            <BrandLogo size={248} style={styles.logo} />
-            <View style={styles.headlineBlock}>
-              <Text style={styles.headline}>Спортивные бальные танцы</Text>
-              <Text style={styles.headlineTag}>шаг за шагом</Text>
+            <Animated.View
+              style={{
+                opacity: rise,
+                transform: [
+                  {
+                    translateY: rise.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [24, 0],
+                    }),
+                  },
+                ],
+              }}
+            >
+              <View style={styles.hero}>
+                <Animated.View style={[styles.heroGlow, { opacity: spotlightOpacity }]} />
+                <BrandLogo size={172} style={styles.logo} />
+                <View style={styles.headlineBlock}>
+                  <Text style={styles.headline}>Спортивные бальные танцы</Text>
+                  <Text style={styles.headlineTag}>шаг за шагом</Text>
+                </View>
+                <Text style={styles.sub}>
+                  Привет, {greeting}! {rank.title} · {stars} ★
+                </Text>
+                <View style={styles.ctaRow}>
+                  {nextLesson ? (
+                    <Pressable
+                      onPress={() =>
+                        router.push(`/lesson/${nextLesson.danceId}/${nextLesson.lessonId}`)
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel={`Продолжить урок: ${nextLesson.title}`}
+                      style={({ pressed }) => [styles.ctaPress, pressed && styles.pressed]}
+                    >
+                      <LinearGradient
+                        colors={[accent, colors.magenta]}
+                        start={{ x: 0, y: 0.5 }}
+                        end={{ x: 1, y: 0.5 }}
+                        style={styles.ctaButton}
+                      >
+                        <Text style={styles.ctaText}>Продолжить урок</Text>
+                      </LinearGradient>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      onPress={() => router.push('/dances')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Все танцы пройдены, открыть каталог"
+                      style={({ pressed }) => [styles.ctaPress, pressed && styles.pressed]}
+                    >
+                      <LinearGradient
+                        colors={[accent, colors.magenta]}
+                        start={{ x: 0, y: 0.5 }}
+                        end={{ x: 1, y: 0.5 }}
+                        style={styles.ctaButton}
+                      >
+                        <Text style={styles.ctaText}>Все танцы пройдены!</Text>
+                      </LinearGradient>
+                    </Pressable>
+                  )}
+                  <Pressable
+                    onPress={() => router.push('/dances')}
+                    accessibilityRole="button"
+                    accessibilityLabel="Открыть каталог танцев"
+                    style={({ pressed }) => [styles.ctaPress, pressed && styles.pressed]}
+                  >
+                    <View style={styles.ctaGhost}>
+                      <Text style={[styles.ctaText, styles.ctaGhostText]}>
+                        Каталог
+                      </Text>
+                    </View>
+                  </Pressable>
+                </View>
+              </View>
+            </Animated.View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Сегодня</Text>
+              <LinearGradient
+                colors={[withAlpha(accent, 0.16), colors.panel]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.todayCard}
+              >
+                <View style={styles.todayTop}>
+                  <Text style={styles.todayValue}>
+                    {todayMinutes} / {parent.dailyGoalMinutes} мин
+                  </Text>
+                  <Text style={styles.streak} accessibilityLabel={`${streakDays} дней практики подряд`}>
+                    {streakDays > 0
+                      ? `🔥 ${streakDays} ${plural(streakDays, 'день', 'дня', 'дней')} подряд`
+                      : '🔥 начни серию'}
+                  </Text>
+                </View>
+                <View style={styles.barTrack}>
+                  <View
+                    style={[
+                      styles.barFill,
+                      { width: `${Math.round(todayRatio * 100)}%`, backgroundColor: accent },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.todayHint}>
+                  {todayRatio >= 1
+                    ? 'Цель дня выполнена — можно танцевать дальше для удовольствия.'
+                    : 'Посчитай под метроном или встань к зеркалу — минуты пойдут в цель.'}
+                </Text>
+              </LinearGradient>
             </View>
-            <Text style={styles.sub}>
-              Привет, {greeting}! Уровень {level} · {stars} ★
-            </Text>
-            <View style={styles.ctaRow}>
-              {nextLesson ? (
-                <Link
-                  href={`/lesson/${nextLesson.danceId}/${nextLesson.lessonId}`}
-                  asChild
-                >
-                  <Pressable
-                    style={({ pressed }) => [styles.ctaPress, pressed && styles.pressed]}
-                  >
-                    <LinearGradient
-                      colors={[colors.cyan, colors.magenta]}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={styles.ctaButton}
-                    >
-                      <Text style={styles.ctaText}>Продолжить урок</Text>
-                    </LinearGradient>
-                  </Pressable>
-                </Link>
-              ) : (
-                <Link href="/dances" asChild>
-                  <Pressable
-                    style={({ pressed }) => [styles.ctaPress, pressed && styles.pressed]}
-                  >
-                    <LinearGradient
-                      colors={[colors.cyan, colors.magenta]}
-                      start={{ x: 0, y: 0.5 }}
-                      end={{ x: 1, y: 0.5 }}
-                      style={styles.ctaButton}
-                    >
-                      <Text style={styles.ctaText}>Все танцы пройдены!</Text>
-                    </LinearGradient>
-                  </Pressable>
-                </Link>
-              )}
-              <Link href="/dances" asChild>
+
+            {nextLesson ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Следующий шаг</Text>
                 <Pressable
-                  style={({ pressed }) => [styles.ctaPress, pressed && styles.pressed]}
+                  onPress={() =>
+                    router.push(`/lesson/${nextLesson.danceId}/${nextLesson.lessonId}`)
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={`Открыть урок ${nextLesson.title}`}
+                  style={({ pressed }) => [pressed && styles.pressed]}
                 >
                   <LinearGradient
-                    colors={[colors.cyan, colors.magenta]}
-                    start={{ x: 0, y: 0.5 }}
-                    end={{ x: 1, y: 0.5 }}
-                    style={styles.ctaButton}
+                    colors={[withAlpha(accent, 0.18), colors.panel]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.nextCard}
                   >
-                    <Text style={styles.ctaText}>Каталог</Text>
+                    <Text style={styles.nextDance}>{nextLesson.danceName}</Text>
+                    <Text style={styles.nextLesson}>{nextLesson.title}</Text>
+                    <Text style={styles.nextHint}>
+                      Уроков пройдено: {completedLessons.length} из {totalLessons} · открыть →
+                    </Text>
                   </LinearGradient>
                 </Pressable>
-              </Link>
-            </View>
-          </View>
-        </Animated.View>
-
-        {nextLesson ? (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Следующий шаг</Text>
-            <LinearGradient
-              colors={['rgba(0,245,255,0.22)', 'rgba(212,0,255,0.18)', 'rgba(28,16,64,0.95)']}
-              style={styles.nextCard}
-            >
-              <Text style={styles.nextDance}>{nextLesson.danceName}</Text>
-              <Text style={styles.nextLesson}>{nextLesson.title}</Text>
-              <Text style={styles.nextHint}>
-                Уроков пройдено: {completedLessons.length} из{' '}
-                {dances.reduce(
-                  (n, d) => n + d.lessons.filter((l) => !l.runthrough).length,
-                  0,
-                )}
-              </Text>
-            </LinearGradient>
-          </View>
-        ) : null}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Программа</Text>
-          <Text style={styles.sectionCopy}>
-            Пять танцев · стандарт и латина · счёт, фигуры и практика под метроном.
-          </Text>
-          <View style={styles.chips}>
-            {dances.map((d) => {
-              const image = getDanceImage(d.id);
-              return (
-                <Link key={d.id} href={`/dance/${d.id}`} asChild>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.chip,
-                      { borderColor: d.accent },
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <View style={[styles.chipImageWrap, { borderColor: d.accent }]}>
-                      {image ? (
-                        <Image
-                          source={image}
-                          style={styles.chipImage}
-                          resizeMode="cover"
-                        />
-                      ) : null}
-                    </View>
-                    <Text
-                      style={[styles.chipText, { color: d.accent }]}
-                      numberOfLines={1}
-                    >
-                      {d.nameEn}
-                    </Text>
-                  </Pressable>
-                </Link>
-              );
-            })}
-          </View>
-        </View>
+              </View>
+            ) : null}
           </>
         )}
       </ScrollView>
@@ -241,21 +245,16 @@ export default function HomeScreen() {
         onPress={() => router.push('/settings')}
         accessibilityRole="button"
         accessibilityLabel="Настройки"
-        hitSlop={14}
+        hitSlop={12}
         style={({ pressed }) => [
           styles.gear,
-          { top: insets.top + 4 },
+          { top: insets.top + 6 },
           pressed && styles.gearPressed,
         ]}
       >
-        <LinearGradient
-          colors={[colors.cyan, colors.magenta]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.gearPlate}
-        >
-          <RNText style={styles.gearGlyph}>⚙</RNText>
-        </LinearGradient>
+        <View style={styles.gearPlate}>
+          <GearIcon size={24} color={colors.ink} />
+        </View>
       </Pressable>
     </StageBackground>
   );
@@ -263,35 +262,13 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   segments: {
-    flexDirection: 'row',
-    gap: 8,
     marginBottom: spacing.md,
-  },
-  segment: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.panelSoft,
-  },
-  segmentActive: {
-    borderColor: colors.cyan,
-    backgroundColor: 'rgba(0,245,255,0.14)',
-  },
-  segmentText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    color: colors.muted,
-  },
-  segmentTextActive: {
-    color: colors.ink,
   },
   gear: {
     position: 'absolute',
-    right: 12,
-    width: 84,
-    height: 84,
+    right: spacing.md,
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -300,187 +277,158 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.95 }],
   },
   gearPlate: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(247,251,255,0.65)',
-  },
-  gearGlyph: {
-    fontSize: 38,
-    lineHeight: 44,
-    color: '#FFFFFF',
-    includeFontPadding: false,
-    textAlign: 'center',
-    // Тень внутри глифа, чтобы шестерёнка читалась на градиенте.
-    textShadowColor: 'rgba(20,8,42,0.45)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    backgroundColor: colors.panel,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
   },
   content: {
     paddingHorizontal: spacing.lg,
   },
   hero: {
-    minHeight: 420,
-    justifyContent: 'flex-end',
-    paddingBottom: spacing.xl,
-    marginBottom: spacing.lg,
     alignItems: 'center',
+    paddingBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   heroGlow: {
     position: 'absolute',
-    top: 10,
-    left: '8%',
-    width: '84%',
-    height: 260,
-    borderRadius: 140,
+    top: 6,
+    left: '22%',
+    width: '56%',
+    height: 168,
+    borderRadius: 120,
     backgroundColor: colors.magenta,
   },
   logo: {
-    marginBottom: spacing.md,
-    borderWidth: 2,
-    borderColor: 'rgba(0,245,255,0.45)',
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
   },
   headlineBlock: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     maxWidth: 320,
     alignItems: 'center',
-    gap: 4,
+    gap: 2,
   },
   headline: {
-    fontFamily: fonts.brand,
-    fontSize: 28,
-    lineHeight: 32,
-    letterSpacing: 0.8,
-    color: colors.ink,
+    ...type.title,
     textAlign: 'center',
   },
   headlineTag: {
     fontFamily: fonts.bodyBold,
-    fontSize: 17,
-    letterSpacing: 1.4,
+    fontSize: 12,
+    lineHeight: 17,
+    letterSpacing: 1.6,
     textTransform: 'uppercase',
     color: colors.gold,
     textAlign: 'center',
   },
   sub: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    color: colors.muted,
+    ...type.bodyMuted,
     marginTop: spacing.sm,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     textAlign: 'center',
   },
   ctaRow: {
     width: '100%',
-    maxWidth: 340,
-    gap: 12,
+    maxWidth: 320,
+    gap: 10,
     alignItems: 'stretch',
   },
   ctaPress: {
-    borderRadius: 18,
+    borderRadius: radius.card,
     overflow: 'hidden',
-    shadowColor: colors.magenta,
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
   },
   ctaButton: {
-    minHeight: 54,
-    borderRadius: 18,
+    minHeight: 50,
+    borderRadius: radius.card,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+  },
+  ctaGhost: {
+    minHeight: 50,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    backgroundColor: colors.panelSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
   },
   ctaText: {
-    fontFamily: fonts.bodyExtra,
+    ...type.button,
+  },
+  ctaGhostText: {
     color: colors.ink,
-    fontSize: 17,
-    letterSpacing: 0.3,
   },
   pressed: {
     opacity: 0.88,
     transform: [{ scale: 0.98 }],
   },
   section: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   sectionTitle: {
-    fontFamily: fonts.brand,
-    fontSize: 28,
-    color: colors.ink,
-    letterSpacing: 0.5,
+    ...type.section,
     marginBottom: spacing.sm,
   },
-  sectionCopy: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 15,
-    marginBottom: spacing.md,
-    lineHeight: 22,
+  todayCard: {
+    borderRadius: radius.card,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    gap: spacing.xs,
+  },
+  todayTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  todayValue: {
+    ...type.cardTitle,
+  },
+  streak: {
+    ...type.caption,
+    color: colors.gold,
+  },
+  barTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.track,
+    overflow: 'hidden',
+    marginVertical: spacing.xs,
+  },
+  barFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  todayHint: {
+    ...type.caption,
   },
   nextCard: {
-    borderRadius: 20,
+    borderRadius: radius.card,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.line,
   },
   nextDance: {
-    fontFamily: fonts.body,
+    ...type.label,
     color: colors.gold,
-    fontSize: 13,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   nextLesson: {
-    fontFamily: fonts.bodyExtra,
-    color: colors.ink,
-    fontSize: 22,
-    marginBottom: 8,
+    ...type.section,
+    marginBottom: spacing.xs,
   },
   nextHint: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 13,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 12,
-  },
-  chip: {
-    width: 104,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingTop: 10,
-    paddingBottom: 12,
-    backgroundColor: colors.panelSoft,
-    gap: 8,
-  },
-  chipImageWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(20,8,42,0.55)',
-  },
-  chipImage: {
-    width: 64,
-    height: 64,
-  },
-  chipText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 12,
-    textAlign: 'center',
+    ...type.caption,
   },
 });

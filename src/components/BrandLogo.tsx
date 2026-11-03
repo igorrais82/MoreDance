@@ -1,6 +1,8 @@
 import React from 'react';
 import { Image, ImageStyle, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
+import { colors } from '../theme';
+
 type Props = {
   size?: number;
   style?: StyleProp<ViewStyle>;
@@ -25,7 +27,7 @@ export function BrandLogo({ size = 220, style, imageStyle }: Props) {
           source={require('../../assets/logo.jpg')}
           style={[styles.image, { width: size, height: size, borderRadius: size / 2 }, imageStyle]}
           resizeMode="cover"
-          accessibilityLabel="Море танцев - MoreDance"
+          accessibilityLabel="Море танцев — MoreDance"
         />
       </View>
     </View>
@@ -35,15 +37,15 @@ export function BrandLogo({ size = 220, style, imageStyle }: Props) {
 const styles = StyleSheet.create({
   shadow: {
     alignSelf: 'center',
-    shadowColor: '#00F5FF',
-    shadowOpacity: 0.45,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
+    shadowColor: colors.sky,
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
   wrap: {
     overflow: 'hidden',
-    backgroundColor: '#14082A',
+    backgroundColor: colors.bg,
   },
   image: {},
 });

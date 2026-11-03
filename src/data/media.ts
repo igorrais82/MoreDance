@@ -18,14 +18,14 @@ export type LessonMedia = {
   pose: PoseGuide;
 };
 
-/** One looping demo video per dance - replace files in assets/videos anytime.
+/** One looping demo video per dance — replace files in assets/videos anytime.
  *
  * Current free Mixkit stock sources (personal/demo use):
- * - waltz:     local - d:\Танцы\Жемчужина Анапы 2026\Артем\1.mp4
- * - cha-cha:   local - d:\Танцы\Жемчужина Анапы 2026\Артем\8.mp4
- * - jive:      local - d:\Танцы\Жемчужина Анапы 2026\Артем\9_1.mp4
- * - quickstep: local - d:\Танцы\Жемчужина Анапы 2026\Артем\3.mp4
- * - samba:     local - d:\Танцы\Жемчужина Анапы 2026\Артем\9_3.mp4
+ * — waltz:     local — d:\Танцы\Жемчужина Анапы 2026\Артем\1.mp4
+ * — cha-cha:   local — d:\Танцы\Жемчужина Анапы 2026\Артем\8.mp4
+ * — jive:      local — d:\Танцы\Жемчужина Анапы 2026\Артем\9_1.mp4
+ * — quickstep: local — d:\Танцы\Жемчужина Анапы 2026\Артем\3.mp4
+ * — samba:     local — d:\Танцы\Жемчужина Анапы 2026\Артем\9_3.mp4
  */
 export const danceVideos: Record<string, number> = {
   waltz: require('../../assets/videos/waltz.mp4'),
@@ -63,7 +63,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     pose: {
       stance: 'side',
       arms: 'frame',
-      cue: 'Боковой шаг вместе с поворотом корпуса - смотри на новую сторону зала',
+      cue: 'Боковой шаг вместе с поворотом корпуса — смотри на новую сторону зала',
       holdSeconds: 3,
     },
   },
@@ -72,7 +72,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     pose: {
       stance: 'closed',
       arms: 'frame',
-      cue: 'Два маленьких квадрата: вперёд, назад, вперёд, назад - без поворотов',
+      cue: 'Два маленьких квадрата: вперёд, назад, вперёд, назад — без поворотов',
       holdSeconds: 4,
     },
   },
@@ -90,7 +90,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     pose: {
       stance: 'closed',
       arms: 'frame',
-      cue: '«Раз» - низко, «два-три» - на полупальцы, макушка вверх',
+      cue: '«Раз» — низко, «два-три» — на полупальцы, макушка вверх',
       holdSeconds: 4,
     },
   },
@@ -108,7 +108,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     pose: {
       stance: 'forward',
       arms: 'frame',
-      cue: 'Маленький квадрат: вперёд, в сторону, вместе - без поворота',
+      cue: 'Маленький квадрат: вперёд, в сторону, вместе — без поворота',
       holdSeconds: 3,
     },
   },
@@ -117,7 +117,16 @@ export const lessonMedia: Record<string, LessonMedia> = {
     pose: {
       stance: 'closed',
       arms: 'frame',
-      cue: 'Поворот на два такта, потом две перемены - рама одна и та же',
+      cue: 'Поворот на два такта, потом две перемены — рама одна и та же',
+      holdSeconds: 4,
+    },
+  },
+  'waltz-golden': {
+    videoLabel: 'Золотая вариация',
+    pose: {
+      stance: 'closed',
+      arms: 'frame',
+      cue: 'Поворот, перемена, поворот, перемена — рама и ось одни на все четыре такта',
       holdSeconds: 4,
     },
   },
@@ -144,7 +153,7 @@ export const lessonMedia: Record<string, LessonMedia> = {
     pose: {
       stance: 'side',
       arms: 'side',
-      cue: 'Лёгкий крест ног сзади - замок',
+      cue: 'Лёгкий крест ног сзади — замок',
       holdSeconds: 3,
     },
   },
@@ -175,30 +184,21 @@ export const lessonMedia: Record<string, LessonMedia> = {
       holdSeconds: 2,
     },
   },
-  'qs-walk': {
-    videoLabel: 'Бег квикстепа',
+  'qs-about': {
+    videoLabel: 'Всё о квикстепе',
     pose: {
-      stance: 'forward',
+      stance: 'closed',
       arms: 'frame',
-      cue: 'Лёгкий бег на полупальцах',
-      holdSeconds: 3,
+      cue: 'Стойка квикстепа: спина прямая, рама мягкая, вес чуть вперёд',
+      holdSeconds: 4,
     },
   },
-  'qs-chasse': {
-    videoLabel: 'Шассе квикстепа',
+  'qs-slow-quick': {
+    videoLabel: 'Счёт слоу и квик',
     pose: {
-      stance: 'side',
+      stance: 'closed',
       arms: 'frame',
-      cue: 'Шаг - вместе - шаг в сторону',
-      holdSeconds: 3,
-    },
-  },
-  'qs-lock': {
-    videoLabel: 'Локстеп',
-    pose: {
-      stance: 'forward',
-      arms: 'frame',
-      cue: 'Скрест сзади на беге вперёд',
+      cue: 'Слоу — шаг длиннее, квик — короче: колени мягкие, корпус спокойный',
       holdSeconds: 3,
     },
   },

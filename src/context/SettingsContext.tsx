@@ -16,8 +16,8 @@ export type TabKey = 'index' | 'adult' | 'dances' | 'progress' | 'dancer';
 export const TAB_KEYS: TabKey[] = ['adult', 'dances', 'index', 'progress', 'dancer'];
 
 /**
- * Вкладки, которые нельзя убрать с панели: «Сцена» - главный экран приложения.
- * Порядок у них менять можно, видимость - нет.
+ * Вкладки, которые нельзя убрать с панели: «Сцена» — главный экран приложения.
+ * Порядок у них менять можно, видимость — нет.
  */
 export const LOCKED_TABS: TabKey[] = ['index'];
 
@@ -25,12 +25,15 @@ export function isTabLocked(tab: TabKey): boolean {
   return LOCKED_TABS.includes(tab);
 }
 
-export const TAB_META: Record<TabKey, { title: string; icon: string; route: string }> = {
-  index: { title: 'Сцена', icon: '★', route: '/' },
-  adult: { title: 'Взрослые', icon: '✦', route: '/adult' },
-  dances: { title: 'Танцы', icon: '♪', route: '/dances' },
-  progress: { title: 'Прогресс', icon: '◆', route: '/progress' },
-  dancer: { title: 'Танцор', icon: '●', route: '/dancer' },
+export const TAB_META: Record<
+  TabKey,
+  { title: string; icon: 'star' | 'note' | 'group' | 'chart' | 'person'; route: string }
+> = {
+  index: { title: 'Сцена', icon: 'star', route: '/' },
+  adult: { title: 'Взрослые', icon: 'group', route: '/adult' },
+  dances: { title: 'Танцы', icon: 'note', route: '/dances' },
+  progress: { title: 'Прогресс', icon: 'chart', route: '/progress' },
+  dancer: { title: 'Танцор', icon: 'person', route: '/dancer' },
 };
 
 export type Gradient = { from: string; to: string };
@@ -45,6 +48,19 @@ export const PALETTE_PRESETS: { name: string; gradient: Gradient }[] = [
   { name: 'Лайм', gradient: { from: '#A8FF60', to: '#2EE6C5' } },
   { name: 'Лёд', gradient: { from: '#7FE7FF', to: '#7A8CFF' } },
   { name: 'Побережье', gradient: { from: '#0ABAB5', to: '#CD853F' } },
+  // Вторая десятка держит по одному-двум оттенкам на каждый участок круга:
+  // красный, зелёный, синий, коричневый, фиолетовый, нейтральный.
+  // Начало градиента заметно светлое: им красится значок активной вкладки.
+  { name: 'Вишня', gradient: { from: '#FF2D55', to: '#7E0033' } },
+  { name: 'Изумруд', gradient: { from: '#00E676', to: '#00705F' } },
+  { name: 'Кобальт', gradient: { from: '#2F6BFF', to: '#00C2FF' } },
+  { name: 'Терракота', gradient: { from: '#F4511E', to: '#8D3B0F' } },
+  { name: 'Слива', gradient: { from: '#C94DE0', to: '#3B0A6B' } },
+  { name: 'Графит', gradient: { from: '#8A93A3', to: '#D1D5DB' } },
+  { name: 'Лаванда', gradient: { from: '#B8A1FF', to: '#FFB3E6' } },
+  { name: 'Затмение', gradient: { from: '#FF6A00', to: '#2E0A5A' } },
+  { name: 'Сияние', gradient: { from: '#00FFB3', to: '#7A00FF' } },
+  { name: 'Кислота', gradient: { from: '#E8FF00', to: '#FF0066' } },
 ];
 
 export const DEFAULT_TAB_PALETTES: Record<TabKey, Gradient> = {
@@ -55,12 +71,21 @@ export const DEFAULT_TAB_PALETTES: Record<TabKey, Gradient> = {
   dancer: { from: '#6C8CFF', to: '#9B4DFF' },
 };
 
-export type FontKey = 'classic' | 'round' | 'strict';
+export type FontKey =
+  | 'classic'
+  | 'round'
+  | 'strict'
+  | 'serif'
+  | 'mono'
+  | 'hand';
 
 export const FONT_OPTIONS: { key: FontKey; name: string; hint: string }[] = [
-  { key: 'classic', name: 'Классика', hint: 'Bebas + Nunito' },
-  { key: 'round', name: 'Круглый', hint: 'только Nunito' },
-  { key: 'strict', name: 'Строгий', hint: 'системный шрифт' },
+  { key: 'classic', name: 'Классика', hint: 'Bebas Neue в цифрах и латинских названиях' },
+  { key: 'round', name: 'Круглый', hint: 'только Nunito, без Bebas' },
+  { key: 'strict', name: 'Строгий', hint: 'системный шрифт телефона' },
+  { key: 'serif', name: 'Сериф', hint: 'Playfair Display в заголовках, Lora в тексте' },
+  { key: 'mono', name: 'Моно', hint: 'JetBrains Mono — как табло студии' },
+  { key: 'hand', name: 'Почерк', hint: 'Caveat в заголовках, Comfortaa в тексте' },
 ];
 
 export const FONT_SCALES = [
@@ -113,18 +138,24 @@ type SettingsValue = Settings & {
 
 const SettingsContext = createContext<SettingsValue | null>(null);
 
-/** Градиент фона под конкретную палитру вкладки. */
+/**
+ * Градиент фона под конкретную палитру вкладки.
+ *
+ * Красители намеренно берутся с низким весом: фон остаётся тёмным при любой
+ * палитре, поэтому светлый текст читается одинаково на всех вкладках, а цвет
+ * вкладки читается как подсветка сцены, а не как заливка во весь экран.
+ */
 export function backgroundStops(gradient: Gradient): [string, string, string] {
-  const top = mix('#0A3D4A', gradient.from, 0.42);
-  const middle = mix('#1A0B3A', mix(gradient.from, gradient.to, 0.5), 0.22);
-  const bottom = mix('#2B0B4A', gradient.to, 0.42);
+  const top = mix('#0B1A22', gradient.from, 0.2);
+  const middle = mix('#100624', mix(gradient.from, gradient.to, 0.5), 0.1);
+  const bottom = mix('#160726', gradient.to, 0.2);
   return [top, middle, bottom];
 }
 
 export function spotColors(gradient: Gradient) {
   return {
-    top: withAlpha(gradient.from, 0.26),
-    bottom: withAlpha(gradient.to, 0.3),
+    top: withAlpha(gradient.from, 0.1),
+    bottom: withAlpha(gradient.to, 0.12),
   };
 }
 
@@ -145,7 +176,7 @@ export function Provider({ children }: { children: React.ReactNode }) {
             ...parsed,
             palettes: { ...DEFAULT_TAB_PALETTES, ...(parsed.palettes ?? {}) },
             tabOrder: normalizeOrder(parsed.tabOrder),
-            // «Сцена» не может быть скрыта - чиним и старые сохранения.
+            // «Сцена» не может быть скрыта — чиним и старые сохранения.
             hiddenTabs: normalizeHidden(parsed.hiddenTabs),
           });
         }

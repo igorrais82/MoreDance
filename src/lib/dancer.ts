@@ -22,7 +22,7 @@ export const CATEGORIES: Category[] = [
 
 /**
  * Ранги: металлы от бронзы к алмазу, по три ступени в каждом,
- * дальше «Легенда» без верхней границы. Цвет - от тусклого к самому яркому.
+ * дальше «Легенда» без верхней границы. Цвет — от тусклого к самому яркому.
  */
 export const RANK_TIERS: { name: string; color: string }[] = [
   { name: 'Бронза', color: '#B06A3B' },
@@ -88,14 +88,17 @@ export function rankFor(xp: number) {
   if (xp >= LEGEND_START_XP) {
     const level = 1 + Math.floor((xp - LEGEND_START_XP) / RANK_STEP);
     const floorXp = LEGEND_START_XP + (level - 1) * RANK_STEP;
+    const toNext = Math.max(0, floorXp + RANK_STEP - xp);
     return {
       index: RANKS.length - 1 + level - 1,
       title: `Легенда ${level}`,
       color: LEGEND_COLOR,
       next: `Легенда ${level + 1}`,
-      toNext: Math.max(0, floorXp + RANK_STEP - xp),
+      toNext,
       progress: Math.min(1, (xp - floorXp) / RANK_STEP),
       isLegend: true,
+      xpLabel: `${xp} XP`,
+      hint: `До «Легенда ${level + 1}» ещё ${toNext} XP`,
     };
   }
 
@@ -107,15 +110,20 @@ export function rankFor(xp: number) {
   const next = RANKS[index + 1] ?? null;
   const span = next ? next.xp - current.xp : 1;
   const done = next ? xp - current.xp : 1;
+  const toNext = next ? Math.max(0, next.xp - xp) : 0;
 
   return {
     index,
     title: current.title,
     color: current.color,
     next: next?.title ?? null,
-    toNext: next ? Math.max(0, next.xp - xp) : 0,
+    toNext,
     progress: next ? Math.min(1, done / span) : 1,
     isLegend: false,
+    xpLabel: `${xp} XP`,
+    hint: next
+      ? `До «${next.title}» ещё ${toNext} XP`
+      : 'Максимальное звание программы',
   };
 }
 

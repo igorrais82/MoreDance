@@ -1,26 +1,21 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { Link, Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Segmented } from '../../src/components/Chip';
+import { LessonVideo } from '../../src/components/LessonVideo';
 import { StageBackground } from '../../src/components/StageBackground';
 import { Text } from '../../src/components/Text';
-import { LessonVideo } from '../../src/components/LessonVideo';
 import { useProgress } from '../../src/context/ProgressContext';
-import {
-  difficultyLabel,
-  getDance,
-  styleLabel,
-} from '../../src/data/dances';
+import { difficultyLabel, getDance, styleLabel } from '../../src/data/dances';
 import { getDanceVideo } from '../../src/data/media';
 import { getDanceImage } from '../../src/data/danceImages';
-import { colors, fonts, spacing } from '../../src/theme';
+import { withAlpha } from '../../src/lib/color';
+import { colors, fonts, radius, spacing, type } from '../../src/theme';
+import { goBack } from '../../src/lib/nav';
+
+type DanceView = 'lessons' | 'about';
 
 export default function DanceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,14 +23,15 @@ export default function DanceDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { isLessonComplete, danceProgress } = useProgress();
+  const [view, setView] = useState<DanceView>('lessons');
 
   if (!dance) {
     return (
       <StageBackground>
         <View style={[styles.fallback, { paddingTop: insets.top + 24 }]}>
           <Text style={styles.title}>Танец не найден</Text>
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.back}>Назад</Text>
+          <Pressable onPress={() => goBack(router)} accessibilityRole="button" accessibilityLabel="Назад">
+            <Text style={styles.back}>← Назад</Text>
           </Pressable>
         </View>
       </StageBackground>
@@ -43,36 +39,47 @@ export default function DanceDetailScreen() {
   }
 
   const progress = danceProgress(dance.id);
+  const percent = progress.total
+    ? Math.round((progress.done / progress.total) * 100)
+    : 0;
 
   /**
    * Номер урока для карточки. Прогон в нумерацию не входит (он рисуется как
-   * «★ Прогон»), поэтому уроки после него продолжают счёт без пропусков.
+   * «Прогон»), поэтому уроки после него продолжают счёт без пропусков.
    */
   const lessonNumbers = new Map<string, number>();
   dance.lessons.forEach((lesson) => {
     if (!lesson.runthrough) lessonNumbers.set(lesson.id, lessonNumbers.size + 1);
   });
+  const firstUndone = dance.lessons.find((lesson) => !isLessonComplete(lesson.id));
 
   return (
     <StageBackground>
       <Stack.Screen options={{ headerShown: false }} />
-      {/* Fixed player: does not move while the lesson list scrolls. */}
-      <View
-        style={[
-          styles.stickyPlayer,
-          { paddingTop: insets.top + spacing.sm },
-        ]}
-      >
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <Pressable
+          onPress={() => goBack(router)}
+          accessibilityRole="button"
+          accessibilityLabel="Назад"
+          style={styles.backBtn}
+        >
           <Text style={styles.back}>← Назад</Text>
         </Pressable>
-        {getDanceVideo(dance.id) != null ? (
-          <LessonVideo
-            label={dance.name}
-            source={getDanceVideo(dance.id)!}
-            poster={getDanceImage(dance.id)}
-          />
-        ) : null}
+        <Text style={[styles.en, { color: dance.accent }]}>{dance.nameEn}</Text>
+        <Text style={styles.title}>{dance.name}</Text>
+        <Text style={styles.meta}>
+          {styleLabel(dance.style)} · {difficultyLabel(dance.difficulty)} · {dance.bpm}{' '}
+          BPM · {dance.timeSignature}
+        </Text>
+        <Segmented
+          options={[
+            { key: 'lessons' as const, label: `Уроки · ${progress.done}/${progress.total}` },
+            { key: 'about' as const, label: 'О танце' },
+          ]}
+          value={view}
+          onChange={setView}
+          accent={dance.accent}
+        />
       </View>
 
       <ScrollView
@@ -83,124 +90,126 @@ export default function DanceDetailScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.en, { color: dance.accent }]}>{dance.nameEn}</Text>
-        <Text style={styles.title}>{dance.name}</Text>
-        <Text style={styles.meta}>
-          {styleLabel(dance.style)} · {difficultyLabel(dance.difficulty)} · {dance.bpm}{' '}
-          BPM · {dance.timeSignature}
-        </Text>
-        <View style={styles.about}>
-          <Text style={[styles.aboutLabel, { color: dance.accent }]}>
-            История
-          </Text>
-          <Text style={styles.aboutText}>{dance.history}</Text>
+        {view === 'lessons' ? (
+          <>
+            <View style={styles.progressRow}>
+              <View style={styles.barTrack}>
+                <View
+                  style={[
+                    styles.barFill,
+                    { width: `${percent}%`, backgroundColor: dance.accent },
+                  ]}
+                />
+              </View>
+            </View>
 
-          <Text style={[styles.aboutLabel, { color: dance.accent }]}>
-            Характер
-          </Text>
-          <Text style={styles.aboutText}>{dance.character}</Text>
-
-          <View style={[styles.factCard, { borderColor: dance.accent }]}>
-            <Text style={styles.factLabel}>Научный факт</Text>
-            <Text style={styles.factText}>{dance.scienceFact}</Text>
-          </View>
-        </View>
-
-        <View style={styles.progressRow}>
-          <Text style={styles.progressLabel}>
-            Прогресс: {progress.done}/{progress.total}
-          </Text>
-          <View style={styles.barTrack}>
-            <View
-              style={[
-                styles.barFill,
-                {
-                  width: `${progress.total ? Math.round((progress.done / progress.total) * 100) : 0}%`,
-                  backgroundColor: dance.accent,
-                },
-              ]}
-            />
-          </View>
-        </View>
-
-        <Text style={styles.section}>Уроки</Text>
-        {dance.lessons.map((lesson) => {
-          const done = isLessonComplete(lesson.id);
-          const accent = lesson.accent ?? dance.accent;
-          const special = lesson.runthrough === true;
-          const number = lessonNumbers.get(lesson.id);
-          return (
-            <Link
-              key={lesson.id}
-              href={`/lesson/${dance.id}/${lesson.id}`}
-              asChild
-            >
-              <Pressable
-                style={({ pressed }) => [
-                  styles.lesson,
-                  {
-                    borderColor: done
-                      ? colors.mint
-                      : special
-                        ? accent
-                        : colors.line,
-                    borderWidth: special ? 2 : 1,
-                  },
-                  special && styles.lessonSpecial,
-                  pressed && { opacity: 0.9 },
-                ]}
-              >
-                <LinearGradient
-                  colors={
-                    special
-                      ? ['rgba(255,216,74,0.16)', 'rgba(255,216,74,0.04)']
-                      : [colors.panel, `${accent}22`]
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.lessonInner}
+            {dance.lessons.map((lesson) => {
+              const done = isLessonComplete(lesson.id);
+              const accent = lesson.accent ?? dance.accent;
+              const special = lesson.runthrough === true;
+              const number = lessonNumbers.get(lesson.id);
+              const current = firstUndone?.id === lesson.id;
+              return (
+                <Pressable
+                  key={lesson.id}
+                  onPress={() => router.push(`/lesson/${dance.id}/${lesson.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${special ? 'Прогон' : `Урок ${number}`}: ${lesson.title}${done ? ', пройден' : ''}`}
+                  style={({ pressed }) => [pressed && styles.pressed]}
                 >
-                  <View style={styles.lessonTop}>
-                    <Text
-                      style={[
-                        styles.lessonIndex,
-                        special && [styles.lessonIndexSpecial, { color: accent }],
-                      ]}
-                    >
-                      {special ? '★ Прогон' : `Урок ${number}`}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.lessonBadge,
-                        { color: accent },
-                        done && { color: colors.mint },
-                      ]}
-                    >
-                      {done ? '★ Готово' : `${lesson.durationMin} мин`}
-                    </Text>
-                  </View>
-                  <Text
-                    style={[styles.lessonTitle, special && { color: accent }]}
+                  <View
+                    style={[
+                      styles.lesson,
+                      done && styles.lessonDone,
+                      current && styles.lessonCurrent,
+                    ]}
                   >
-                    {lesson.title}
-                  </Text>
-                  <Text style={styles.lessonSummary}>{lesson.summary}</Text>
-                </LinearGradient>
-              </Pressable>
-            </Link>
-          );
-        })}
+                    <View
+                      style={[
+                        styles.stripe,
+                        {
+                          backgroundColor: done
+                            ? colors.mint
+                            : special
+                              ? colors.gold
+                              : accent,
+                        },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.badge,
+                        special
+                          ? { backgroundColor: withAlpha(colors.gold, 0.18) }
+                          : { backgroundColor: withAlpha(accent, 0.16) },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.badgeText,
+                          { color: special ? colors.gold : accent },
+                        ]}
+                      >
+                        {special ? '★' : number}
+                      </Text>
+                    </View>
+                    <View style={styles.lessonBody}>
+                      <View style={styles.lessonTop}>
+                        <Text style={styles.lessonTitle} numberOfLines={2}>
+                          {special && !lesson.title.startsWith('Прогон')
+                            ? `Прогон: ${lesson.title}`
+                            : lesson.title}
+                        </Text>
+                        <Text
+                          style={[styles.lessonMeta, done && { color: colors.mint }]}
+                        >
+                          {done ? '✓ Пройден' : `${lesson.durationMin} мин`}
+                        </Text>
+                      </View>
+                      <Text style={styles.lessonSummary} numberOfLines={2}>
+                        {lesson.summary}
+                      </Text>
+                    </View>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </>
+        ) : (
+          <>
+            {getDanceVideo(dance.id) != null ? (
+              <View style={styles.playerBlock}>
+                <LessonVideo
+                  label={`${dance.name} · демонстрация`}
+                  source={getDanceVideo(dance.id)!}
+                  poster={getDanceImage(dance.id)}
+                />
+              </View>
+            ) : null}
+
+            <Text style={[styles.aboutLabel, { color: dance.accent }]}>История</Text>
+            <Text style={styles.aboutText}>{dance.history}</Text>
+
+            <Text style={[styles.aboutLabel, { color: dance.accent }]}>Характер</Text>
+            <Text style={styles.aboutText}>{dance.character}</Text>
+
+            <View style={[styles.factCard, { borderColor: dance.accent }]}>
+              <Text style={styles.factLabel}>Научный факт</Text>
+              <Text style={styles.factText}>{dance.scienceFact}</Text>
+            </View>
+          </>
+        )}
       </ScrollView>
     </StageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  stickyPlayer: {
+  header: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.sm,
+    gap: spacing.xs,
     zIndex: 2,
-    elevation: 4,
   },
   scroll: {
     flex: 1,
@@ -215,137 +224,120 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     alignSelf: 'flex-start',
-    marginBottom: spacing.sm,
   },
   back: {
-    fontFamily: fonts.bodyBold,
-    color: colors.muted,
-    fontSize: 15,
+    ...type.link,
   },
   en: {
     fontFamily: fonts.brand,
-    fontSize: 22,
+    fontSize: 17,
+    lineHeight: 22,
     letterSpacing: 1,
   },
   title: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 32,
-    color: colors.ink,
-    marginTop: 4,
+    ...type.title,
   },
   meta: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 14,
-    marginTop: 8,
-    marginBottom: spacing.md,
+    ...type.small,
+    marginBottom: spacing.xs,
   },
-  about: {
+  playerBlock: {
     marginBottom: spacing.lg,
   },
   aboutLabel: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 12,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 4,
+    ...type.label,
+    marginBottom: 2,
   },
   aboutText: {
-    fontFamily: fonts.body,
-    color: colors.ink,
-    fontSize: 15,
-    lineHeight: 22,
+    ...type.body,
     marginBottom: spacing.md,
   },
   factCard: {
-    borderWidth: 1.5,
-    borderRadius: 16,
+    borderWidth: 1,
+    borderRadius: radius.card,
     padding: spacing.md,
     backgroundColor: colors.panel,
   },
   factLabel: {
-    fontFamily: fonts.bodyExtra,
+    ...type.label,
     color: colors.gold,
-    fontSize: 12,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   factText: {
-    fontFamily: fonts.body,
-    color: colors.ink,
-    fontSize: 15,
-    lineHeight: 22,
+    ...type.body,
   },
   progressRow: {
-    marginBottom: spacing.lg,
-  },
-  progressLabel: {
-    fontFamily: fonts.bodyBold,
-    color: colors.ink,
-    marginBottom: 8,
+    marginBottom: spacing.md,
   },
   barTrack: {
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.track,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
   },
-  section: {
-    fontFamily: fonts.brand,
-    fontSize: 26,
-    color: colors.ink,
-    marginBottom: spacing.sm,
-  },
   lesson: {
-    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    width: '100%',
+    borderRadius: radius.card,
     borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.panel,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.sm + 2,
     marginBottom: spacing.sm,
     overflow: 'hidden',
   },
-  lessonSpecial: {
-    shadowColor: colors.gold,
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+  lessonDone: {
+    borderColor: withAlpha(colors.mint, 0.45),
   },
-  lessonInner: {
-    padding: spacing.md,
+  lessonCurrent: {
+    borderColor: colors.lineStrong,
+  },
+  stripe: {
+    alignSelf: 'stretch',
+    width: 3,
+    borderRadius: 2,
+    marginVertical: 2,
+  },
+  badge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontFamily: fonts.bodyExtra,
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  lessonBody: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
   },
   lessonTop: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  lessonIndex: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 12,
-  },
-  lessonIndexSpecial: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 13,
-    letterSpacing: 0.6,
-  },
-  lessonBadge: {
-    fontFamily: fonts.bodyBold,
-    color: colors.sky,
-    fontSize: 12,
+    gap: spacing.xs,
   },
   lessonTitle: {
-    fontFamily: fonts.bodyExtra,
-    color: colors.ink,
-    fontSize: 20,
-    marginBottom: 4,
+    ...type.cardTitle,
+    flex: 1,
+  },
+  lessonMeta: {
+    ...type.caption,
   },
   lessonSummary: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 14,
-    lineHeight: 20,
+    ...type.small,
+  },
+  pressed: {
+    opacity: 0.9,
   },
 });

@@ -2,11 +2,32 @@ import {
   BebasNeue_400Regular,
 } from '@expo-google-fonts/bebas-neue';
 import {
+  Caveat_700Bold,
+} from '@expo-google-fonts/caveat';
+import {
+  Comfortaa_400Regular,
+  Comfortaa_600SemiBold,
+  Comfortaa_700Bold,
+} from '@expo-google-fonts/comfortaa';
+import {
+  JetBrainsMono_400Regular,
+  JetBrainsMono_500Medium,
+  JetBrainsMono_700Bold,
+  JetBrainsMono_800ExtraBold,
+} from '@expo-google-fonts/jetbrains-mono';
+import {
+  Lora_500Medium,
+  Lora_600SemiBold,
+} from '@expo-google-fonts/lora';
+import {
   Nunito_500Medium,
   Nunito_700Bold,
   Nunito_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/nunito';
+import {
+  PlayfairDisplay_700Bold,
+} from '@expo-google-fonts/playfair-display';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -44,6 +65,18 @@ export default function RootLayout() {
     Nunito_500Medium,
     Nunito_700Bold,
     Nunito_800ExtraBold,
+    // Дополнительные наборы из настроек.
+    PlayfairDisplay_700Bold,
+    Lora_500Medium,
+    Lora_600SemiBold,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_500Medium,
+    JetBrainsMono_700Bold,
+    JetBrainsMono_800ExtraBold,
+    Caveat_700Bold,
+    Comfortaa_400Regular,
+    Comfortaa_600SemiBold,
+    Comfortaa_700Bold,
   });
 
   useEffect(() => {

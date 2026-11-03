@@ -6,12 +6,14 @@ import {
   Animated,
   Image,
   ImageSourcePropType,
+  LayoutChangeEvent,
   Pressable,
   StyleSheet,
   View,
 } from 'react-native';
 
 import { Text } from './Text';
+import { ChevronIcon, PauseIcon, PlayIcon, SoundIcon } from './icons';
 import { colors, fonts, spacing } from '../theme';
 
 type Props = {
@@ -20,6 +22,8 @@ type Props = {
   source: number;
   /** Still frame shown while the player is not on screen or still loading. */
   poster?: ImageSourcePropType;
+  /** Свёрнутый вид по умолчанию: на экране урока видео не должно съедать пол-экрана. */
+  startCollapsed?: boolean;
 };
 
 /** Длительность плавного появления/скрытия плаката. */
@@ -27,8 +31,16 @@ const FADE_MS = 180;
 /** За сколько до конца ролика закрываем кадр, чтобы шов цикла не был чёрным. */
 const SEAM_LEAD = 0.35;
 
+function formatTime(seconds: number) {
+  const safe = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(safe / 60);
+  const s = safe % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 /**
- * Sticky looping lesson/dance video player with custom mute/play controls.
+ * Липкий видео-плеер урока: играет по кругу, но его можно свернуть в одну
+ * строку и перемотать по полосе прогресса.
  *
  * Android specifics handled here:
  *  - `surfaceType="textureView"` keeps the video inside the view hierarchy;
@@ -44,13 +56,22 @@ const SEAM_LEAD = 0.35;
  *    poster covers the player as soon as the screen loses focus.
  *
  * Native controls are disabled on purpose: their auto-show scrim blinked on
- * every loop. The bar has small custom controls instead.
+ * every loop. The bar below has small custom controls instead.
  */
-export function LessonVideo({ label, source, poster }: Props) {
+export function LessonVideo({
+  label,
+  source,
+  poster,
+  startCollapsed = false,
+}: Props) {
   const [muted, setMuted] = useState(true);
+  const [expanded, setExpanded] = useState(!startCollapsed);
   const [focused, setFocused] = useState(false);
   const [veiled, setVeiled] = useState(true);
   const [stalled, setStalled] = useState(false);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [trackWidth, setTrackWidth] = useState(0);
   const focusedRef = useRef(false);
   /** Кадр уже показывали хотя бы раз: после этого плакат не перекрывает видео. */
   const startedRef = useRef(false);
@@ -123,7 +144,7 @@ export function LessonVideo({ label, source, poster }: Props) {
    * In dev the videos are streamed from the Metro server. If it is not running
    * (or the port changed), ExoPlayer fails and `status` becomes 'error' - the
    * player will never recover on its own, so the cover must say so instead of
-   * spinning "Видео загружается…" forever.
+   * spinning «Видео загружается…» forever.
    */
   const broken = status === 'error' || (!ready && stalled);
 
@@ -184,9 +205,13 @@ export function LessonVideo({ label, source, poster }: Props) {
   // Смена кадра на стыке: перекрываем заранее, иначе видно чёрный провал.
   useEventListener(player, 'timeUpdate', () => {
     if (!focusedRef.current || !startedRef.current) return;
-    const duration = player.duration;
-    if (!duration || duration <= 0) return;
-    if (player.currentTime >= duration - SEAM_LEAD) {
+    const total = player.duration;
+    if (total > 0) {
+      setDuration(total);
+      setPosition(player.currentTime);
+    }
+    if (!total || total <= 0) return;
+    if (player.currentTime >= total - SEAM_LEAD) {
       showCover();
     }
   });
@@ -284,94 +309,166 @@ export function LessonVideo({ label, source, poster }: Props) {
     }
   };
 
+  const onTrackLayout = (event: LayoutChangeEvent) => {
+    setTrackWidth(event.nativeEvent.layout.width);
+  };
+
+  /** Перемотка по полосе: тап в любом месте дорожки. */
+  const seekTo = (ratio: number) => {
+    if (!duration || duration <= 0) return;
+    const next = Math.max(0, Math.min(1, ratio)) * duration;
+    try {
+      player.currentTime = next;
+      setPosition(next);
+      if (!isPlaying) player.play();
+    } catch {
+      // ignore
+    }
+  };
+
+  // Смена «свёрнуто/развёрнуто»: поверхность видео пересоздаётся драйвером,
+  // поэтому на время перехода снова показываем плакат и лишь потом открываем кадр.
+  useEffect(() => {
+    if (!expanded) return;
+    if (!focused) return;
+    showCover(true);
+    hideCover(420);
+  }, [expanded, focused, showCover, hideCover]);
+
+  const progress = duration > 0 ? Math.min(1, position / duration) : 0;
+
   return (
     <View style={styles.wrap} collapsable={false}>
-      <View style={styles.videoShell} collapsable={false}>
-        <View style={styles.videoWrap}>
-          {/* Подложка под поверхностью видео: любой пропущенный кадр показывает
-              афишу танца, а не чёрный прямоугольник. */}
-          {poster ? (
-            <Image
-              source={poster}
-              style={styles.underPoster}
-              resizeMode="cover"
+      {/*
+        Видео не размонтируем при сворачивании: у ExoPlayer это оборачивается
+        чёрным кадром при повторном открытии. Держим блок смонтированным и
+        просто убираем его высоту.
+      */}
+      <View
+        style={[styles.collapsible, !expanded && styles.collapsed]}
+        pointerEvents={expanded ? 'auto' : 'none'}
+      >
+        <View style={styles.videoShell} collapsable={false}>
+          <View style={styles.videoWrap}>
+            {/* Подложка под поверхностью видео: любой пропущенный кадр показывает
+                афишу танца, а не чёрный прямоугольник. */}
+            {poster ? (
+              <Image
+                source={poster}
+                style={styles.underPoster}
+                resizeMode="cover"
+              />
+            ) : null}
+            <VideoView
+              style={styles.video}
+              player={player}
+              surfaceType="textureView"
+              contentFit="contain"
+              nativeControls={false}
+              playsInline
+              allowsVideoFrameAnalysis={false}
             />
-          ) : null}
-          <VideoView
-            style={styles.video}
-            player={player}
-            surfaceType="textureView"
-            contentFit="contain"
-            nativeControls={false}
-            playsInline
-            allowsVideoFrameAnalysis={false}
-          />
+          </View>
+          <Animated.View
+            style={[styles.cover, { opacity: fade }]}
+            pointerEvents={veiled ? (broken ? 'auto' : 'none') : 'none'}
+          >
+            {poster ? (
+              <Image
+                source={poster}
+                style={styles.coverImage}
+                resizeMode="cover"
+                blurRadius={14}
+              />
+            ) : null}
+            <View style={styles.coverShade} />
+            {broken ? (
+              <View style={styles.coverMessage}>
+                <Text style={styles.coverText}>Видео не загрузилось</Text>
+                <Text style={styles.coverHint}>
+                  Проверь подключение к серверу разработки и попробуй ещё раз
+                </Text>
+                <Pressable
+                  onPress={onRetry}
+                  accessibilityRole="button"
+                  accessibilityLabel="Повторить загрузку видео"
+                  style={({ pressed }) => [
+                    styles.retryBtn,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
+                  <Text style={styles.retryText}>Повторить</Text>
+                </Pressable>
+              </View>
+            ) : !ready ? (
+              <Text style={styles.coverText}>Видео загружается…</Text>
+            ) : null}
+          </Animated.View>
         </View>
-        <Animated.View
-          style={[styles.cover, { opacity: fade }]}
-          pointerEvents={veiled ? (broken ? 'auto' : 'none') : 'none'}
+
+        {/* Полоса перемотки: сразу видно, что это ролик, а не афиша. */}
+        <Pressable
+          onLayout={onTrackLayout}
+          onPress={(event) => {
+            if (!trackWidth) return;
+            seekTo(event.nativeEvent.locationX / trackWidth);
+          }}
+          accessibilityRole="adjustable"
+          accessibilityLabel="Перемотка видео"
+          accessibilityValue={{ min: 0, max: 100, now: Math.round(progress * 100) }}
+          style={styles.track}
         >
-          {poster ? (
-            <Image
-              source={poster}
-              style={styles.coverImage}
-              resizeMode="cover"
-              blurRadius={14}
-            />
-          ) : null}
-          <View style={styles.coverShade} />
-          {broken ? (
-            <View style={styles.coverMessage}>
-              <Text style={styles.coverText}>Видео не загрузилось</Text>
-              <Text style={styles.coverHint}>
-                Проверь подключение к серверу разработки и попробуй ещё раз
-              </Text>
-              <Pressable
-                onPress={onRetry}
-                accessibilityRole="button"
-                style={({ pressed }) => [
-                  styles.retryBtn,
-                  pressed && { opacity: 0.85 },
-                ]}
-              >
-                <Text style={styles.retryText}>Повторить</Text>
-              </Pressable>
-            </View>
-          ) : !ready ? (
-            <Text style={styles.coverText}>Видео загружается…</Text>
-          ) : null}
-        </Animated.View>
+          <View style={styles.trackBase} />
+          <View style={[styles.trackFill, { width: `${progress * 100}%` }]} />
+          <View style={[styles.trackKnob, { left: `${progress * 100}%` }]} />
+        </Pressable>
       </View>
+
       <View style={styles.bar}>
-        <Text style={styles.label} numberOfLines={1}>
-          {label ?? 'Видео'}
-        </Text>
         <Pressable
           onPress={togglePlay}
           accessibilityRole="button"
-          accessibilityLabel={isPlaying ? 'Пауза' : 'Смотреть'}
+          accessibilityLabel={isPlaying ? 'Пауза' : 'Смотреть видео'}
           hitSlop={8}
-          style={({ pressed }) => [
-            styles.controlBtn,
-            pressed && { opacity: 0.85 },
-          ]}
+          style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.8 }]}
         >
-          <Text style={styles.controlText}>{isPlaying ? 'Пауза' : 'Смотреть'}</Text>
+          {isPlaying ? (
+            <PauseIcon size={18} color={colors.ink} />
+          ) : (
+            <PlayIcon size={18} color={colors.ink} />
+          )}
         </Pressable>
-        <Pressable
-          onPress={toggleMute}
-          accessibilityRole="button"
-          accessibilityLabel={muted ? 'Включить звук' : 'Выключить звук'}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.controlBtn,
-            !muted && styles.controlBtnOn,
-            pressed && { opacity: 0.85 },
-          ]}
-        >
-          <Text style={[styles.controlText, !muted && styles.controlTextOn]}>
-            {muted ? 'Звук выкл' : 'Звук вкл'}
+        <View style={styles.titles}>
+          <Text style={styles.label} numberOfLines={1}>
+            {label ?? 'Видео'}
           </Text>
+          <Text style={styles.time}>
+            {formatTime(position)} / {formatTime(duration)}
+          </Text>
+        </View>
+        {expanded ? (
+          <Pressable
+            onPress={toggleMute}
+            accessibilityRole="button"
+            accessibilityLabel={muted ? 'Включить звук' : 'Выключить звук'}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.iconBtn,
+              !muted && styles.iconBtnOn,
+              pressed && { opacity: 0.8 },
+            ]}
+          >
+            <SoundIcon size={18} muted={muted} color={muted ? colors.muted : colors.cyan} />
+          </Pressable>
+        ) : null}
+        <Pressable
+          onPress={() => setExpanded((value) => !value)}
+          accessibilityRole="button"
+          accessibilityLabel={expanded ? 'Свернуть видео' : 'Развернуть видео'}
+          hitSlop={8}
+          style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.8 }]}
+        >
+          <ChevronIcon size={18} up={!expanded} color={colors.ink} />
         </Pressable>
       </View>
     </View>
@@ -393,6 +490,13 @@ const styles = StyleSheet.create({
     // Не чёрный: даже при полностью погашенной поверхности виден фон панели.
     backgroundColor: colors.bgElevated,
     overflow: 'hidden',
+  },
+  collapsible: {
+    overflow: 'hidden',
+  },
+  collapsed: {
+    height: 0,
+    opacity: 0,
   },
   videoWrap: {
     position: 'absolute',
@@ -456,9 +560,11 @@ const styles = StyleSheet.create({
   },
   coverHint: {
     fontFamily: fonts.body,
-    color: 'rgba(247,251,255,0.7)',
+    color: colors.ink,
     fontSize: 12,
+    lineHeight: 17,
     textAlign: 'center',
+    opacity: 0.8,
   },
   retryBtn: {
     marginTop: 2,
@@ -474,39 +580,66 @@ const styles = StyleSheet.create({
     color: colors.cyan,
     fontSize: 13,
   },
+  track: {
+    height: 18,
+    justifyContent: 'center',
+    paddingHorizontal: 0,
+    backgroundColor: colors.panel,
+  },
+  trackBase: {
+    height: 4,
+    backgroundColor: colors.track,
+  },
+  trackFill: {
+    position: 'absolute',
+    left: 0,
+    height: 4,
+    backgroundColor: colors.cyan,
+  },
+  trackKnob: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    marginLeft: -6,
+    borderRadius: 6,
+    backgroundColor: colors.cyan,
+  },
   bar: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
     backgroundColor: colors.panel,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: spacing.xs,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: 'rgba(247,251,255,0.06)',
+  },
+  iconBtnOn: {
+    borderColor: colors.cyan,
+    backgroundColor: 'rgba(0,245,255,0.14)',
+  },
+  titles: {
+    flex: 1,
+    minWidth: 0,
   },
   label: {
-    flex: 1,
     fontFamily: fonts.bodyExtra,
     color: colors.ink,
     fontSize: 14,
+    lineHeight: 19,
   },
-  controlBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: 'rgba(247,251,255,0.08)',
-  },
-  controlBtnOn: {
-    borderColor: colors.cyan,
-    backgroundColor: 'rgba(0,245,255,0.16)',
-  },
-  controlText: {
-    fontFamily: fonts.bodyBold,
+  time: {
+    fontFamily: fonts.body,
     color: colors.muted,
-    fontSize: 12,
-  },
-  controlTextOn: {
-    color: colors.cyan,
+    fontSize: 11,
+    lineHeight: 15,
   },
 });

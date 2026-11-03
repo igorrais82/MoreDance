@@ -1,7 +1,9 @@
-import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,16 +12,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { StageBackground } from '../../src/components/StageBackground';
 import { Text } from '../../src/components/Text';
 import { useParent } from '../../src/context/ParentContext';
 import { useProgress } from '../../src/context/ProgressContext';
 import { dances } from '../../src/data/dances';
-import { colors, fonts, spacing } from '../../src/theme';
+import { colors, fonts, radius, spacing, type } from '../../src/theme';
 
 function formatTime(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60);
-  return `${m} мин`;
+  const s = totalSeconds % 60;
+  return s > 0 ? `${m} мин ${s} с` : `${m} мин`;
 }
 
 function PinPad({
@@ -27,11 +29,13 @@ function PinPad({
   subtitle,
   onSubmit,
   cta,
+  footer,
 }: {
   title: string;
   subtitle: string;
   onSubmit: (pin: string) => Promise<void> | void;
   cta: string;
+  footer?: React.ReactNode;
 }) {
   const [pin, setPin] = useState('');
   const [busy, setBusy] = useState(false);
@@ -53,82 +57,101 @@ function PinPad({
 
   return (
     <View style={styles.pinWrap}>
-      <Text style={styles.pinTitle}>{title}</Text>
-      <Text style={styles.pinSub}>{subtitle}</Text>
-      <View style={styles.dots}>
+      <Text style={type.section}>{title}</Text>
+      <Text style={[type.small, styles.pinSub]}>{subtitle}</Text>
+      <View style={styles.dots} accessible accessibilityLabel={`Введено ${pin.length} из 4 цифр`}>
         {Array.from({ length: 4 }).map((_, i) => (
-          <View
-            key={i}
-            style={[styles.dot, i < pin.length && styles.dotFilled]}
-          />
+          <View key={i} style={[styles.dot, i < pin.length && styles.dotFilled]} />
         ))}
       </View>
       <View style={styles.pad}>
-        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map(
-          (key) => (
-            <Pressable
-              key={key || 'empty'}
-              disabled={!key || busy}
-              onPress={() => {
-                if (key === '⌫') setPin((p) => p.slice(0, -1));
-                else if (key) push(key);
-              }}
-              style={({ pressed }) => [
-                styles.key,
-                !key && styles.keyEmpty,
-                pressed && key && { opacity: 0.75 },
-              ]}
-            >
-              <Text style={styles.keyText}>{key}</Text>
-            </Pressable>
-          ),
-        )}
+        {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((key) => (
+          <Pressable
+            key={key || 'empty'}
+            disabled={!key || busy}
+            onPress={() => {
+              if (key === '⌫') setPin((p) => p.slice(0, -1));
+              else if (key) push(key);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={
+              !key ? undefined : key === '⌫' ? 'Стереть цифру' : `Цифра ${key}`
+            }
+            style={({ pressed }) => [
+              styles.key,
+              !key && styles.keyEmpty,
+              pressed && key && styles.pressed,
+            ]}
+          >
+            <Text style={styles.keyText}>{key}</Text>
+          </Pressable>
+        ))}
       </View>
-      <Text style={styles.pinCta}>{cta}</Text>
+      <Text style={[type.caption, styles.pinCta]}>{cta}</Text>
+      {footer}
     </View>
   );
 }
 
 export default function ParentScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const parent = useParent();
   const progress = useProgress();
   const [nameDraft, setNameDraft] = useState(parent.parentName);
   const [goalDraft, setGoalDraft] = useState(String(parent.dailyGoalMinutes));
   const [error, setError] = useState('');
+  const [saved, setSaved] = useState('');
 
-  const dailySeconds = parent.dailyGoalMinutes * 60;
-  const todayRatio = Math.min(
-    1,
-    progress.practiceSeconds / Math.max(dailySeconds, 1),
-  );
+  const goalSeconds = Math.max(parent.dailyGoalMinutes, 1) * 60;
+  const todayRatio = Math.min(1, progress.todayPracticeSeconds / goalSeconds);
+
+  // Экран открывается под сегментами «Профиль | Родитель», внешний отступ уже есть.
+  const scrollStops = {
+    paddingBottom: insets.bottom + 108,
+    paddingTop: spacing.xs,
+  };
+
+  const askForgotPin = () => {
+    Alert.alert(
+      'Забыли PIN?',
+      'Код будет удалён, и кабинет попросит придумать новый. Прогресс ребёнка, звёзды и уроки останутся на месте.',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Удалить PIN',
+          style: 'destructive',
+          onPress: () => {
+            setError('');
+            parent.resetPin().catch(() => undefined);
+          },
+        },
+      ],
+    );
+  };
 
   if (!parent.ready) {
-    return (
-      <StageBackground>
-        <View />
-      </StageBackground>
-    );
+    return <View />;
   }
 
   if (!parent.hasPin) {
     return (
-      <StageBackground>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingTop: insets.top + spacing.lg, paddingBottom: 40 },
-          ]}
+          contentContainerStyle={[styles.content, scrollStops]}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.brand}>MoreDance</Text>
-          <Text style={styles.title}>Аккаунт родителя</Text>
-          <Text style={styles.copy}>
-            Создай PIN из 4 цифр. Дети не смогут открыть настройки и сброс
-            прогресса без кода.
+          <Text style={type.title}>Аккаунт родителя</Text>
+          <Text style={[type.small, styles.copy]}>
+            Придумай PIN из 4 цифр — он защитит сброс прогресса и настройки. Код
+            хранится только на этом телефоне.
           </Text>
           <PinPad
             title="Новый PIN"
-            subtitle="Запомни код - он хранится только на этом телефоне"
+            subtitle="Запомни код: восстановить его нельзя, но можно задать заново"
             cta="Введи 4 цифры"
             onSubmit={async (pin) => {
               const ok = await parent.setupPin(pin);
@@ -137,21 +160,21 @@ export default function ParentScreen() {
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </ScrollView>
-      </StageBackground>
+      </KeyboardAvoidingView>
     );
   }
 
   if (!parent.isUnlocked) {
     return (
-      <StageBackground>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingTop: insets.top + spacing.lg, paddingBottom: 40 },
-          ]}
+          contentContainerStyle={[styles.content, scrollStops]}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.brand}>MoreDance</Text>
-          <Text style={styles.title}>Вход для родителя</Text>
+          <Text style={type.title}>Вход для родителя</Text>
           <PinPad
             title="PIN-код"
             subtitle={`Здравствуй, ${parent.parentName}`}
@@ -160,89 +183,119 @@ export default function ParentScreen() {
               const ok = await parent.unlock(pin);
               setError(ok ? '' : 'Неверный PIN');
             }}
+            footer={
+              <Pressable
+                onPress={askForgotPin}
+                accessibilityRole="button"
+                accessibilityLabel="Забыли PIN, задать новый"
+                style={styles.linkBtn}
+              >
+                <Text style={type.link}>Забыли PIN?</Text>
+              </Pressable>
+            }
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </ScrollView>
-      </StageBackground>
+      </KeyboardAvoidingView>
     );
   }
 
   return (
-    <StageBackground>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + 32 },
-        ]}
+        contentContainerStyle={[styles.content, scrollStops]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.brand}>MoreDance</Text>
-            <Text style={styles.title}>Кабинет родителя</Text>
-          </View>
-          <Pressable onPress={parent.lock} style={styles.lockBtn}>
-            <Text style={styles.lockText}>Выйти</Text>
+          <Text style={[type.title, styles.title]}>Кабинет родителя</Text>
+          <Pressable
+            onPress={parent.lock}
+            accessibilityRole="button"
+            accessibilityLabel="Выйти из кабинета родителя"
+            style={styles.lockBtn}
+          >
+            <Text style={type.strong}>Выйти</Text>
           </Pressable>
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Ребёнок: {progress.dancerName}</Text>
-          <Text style={styles.statLine}>
-            Уровень {progress.level} · {progress.stars} ★ · уроков{' '}
+          <Text style={type.label}>Ребёнок</Text>
+          <Text style={[type.section, styles.panelValue]}>
+            {progress.dancerName}
+          </Text>
+          <Text style={type.small}>
+            {progress.rank.title} · {progress.xp} XP · {progress.stars} ★ · уроков{' '}
             {progress.completedLessons.length}/{progress.totalLessons}
           </Text>
-          <Text style={styles.statLine}>
-            Практика всего: {formatTime(progress.practiceSeconds)} · камера:{' '}
-            {formatTime(progress.cameraPracticeSeconds)}
+        </View>
+
+        <View style={[styles.panel, { borderColor: colors.mint }]}>
+          <Text style={type.label}>Сегодня</Text>
+          <Text style={[type.section, styles.panelValue]}>
+            {formatTime(progress.todayPracticeSeconds)}
           </Text>
-          <Text style={styles.statLine}>
-            Средняя оценка поз: {progress.averagePoseScore}%
+          <Text style={type.small}>
+            Цель {parent.dailyGoalMinutes} мин в день · выполнено{' '}
+            {Math.round(todayRatio * 100)}%
           </Text>
           <View style={styles.barTrack}>
             <View style={[styles.barFill, { width: `${Math.round(todayRatio * 100)}%` }]} />
           </View>
-          <Text style={styles.hint}>
-            К цели {parent.dailyGoalMinutes} мин/день: {Math.round(todayRatio * 100)}%
-            от накопленной практики
+          <Text style={[type.caption, styles.panelNote]}>
+            Всего практики: {formatTime(progress.practiceSeconds)} · у зеркала:{' '}
+            {formatTime(progress.cameraPracticeSeconds)} · серия:{' '}
+            {progress.streakDays} дн.
           </Text>
         </View>
 
         <View style={styles.panel}>
-          <Text style={styles.panelTitle}>Имя родителя</Text>
+          <Text style={[type.label, styles.inputLabel]}>Имя родителя</Text>
           <TextInput
             value={nameDraft}
             onChangeText={setNameDraft}
             style={styles.input}
+            placeholder="Как к тебе обращаться"
             placeholderTextColor={colors.muted}
+            accessibilityLabel="Имя родителя"
           />
-          <Text style={styles.panelTitle}>Цель практики (мин/день)</Text>
+          <Text style={[type.label, styles.inputLabel]}>Цель практики, мин в день</Text>
           <TextInput
             value={goalDraft}
             onChangeText={setGoalDraft}
             keyboardType="number-pad"
             style={styles.input}
+            placeholder="Например, 15"
             placeholderTextColor={colors.muted}
+            accessibilityLabel="Цель практики в минутах в день"
           />
           <Pressable
             onPress={async () => {
               await parent.setParentName(nameDraft);
               await parent.setDailyGoalMinutes(Number(goalDraft) || 15);
+              setGoalDraft(String(Math.min(90, Math.max(5, Math.round(Number(goalDraft) || 15)))));
+              setSaved('Настройки сохранены');
             }}
-            style={({ pressed }) => [styles.primary, pressed && { opacity: 0.88 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Сохранить настройки родителя"
+            style={({ pressed }) => [styles.primary, pressed && styles.pressed]}
           >
-            <Text style={styles.primaryText}>Сохранить настройки</Text>
+            <Text style={type.button}>Сохранить настройки</Text>
           </Pressable>
+          {saved ? <Text style={styles.saved}>{saved}</Text> : null}
         </View>
 
-        <Text style={styles.section}>Прогресс по танцам</Text>
+        <Text style={[type.section, styles.section]}>Прогресс по танцам</Text>
         {dances.map((dance) => {
           const p = progress.danceProgress(dance.id);
           return (
             <View key={dance.id} style={styles.row}>
-              <Text style={styles.rowTitle}>{dance.name}</Text>
-              <Text style={styles.rowMeta}>
-                {p.done}/{p.total}
+              <Text style={type.strong}>{dance.name}</Text>
+              <Text style={type.caption}>
+                {p.done} из {p.total}
               </Text>
             </View>
           );
@@ -252,7 +305,7 @@ export default function ParentScreen() {
           onPress={() =>
             Alert.alert(
               'Сбросить прогресс ребёнка?',
-              'Уроки, звёзды и оценки поз обнулятся. Имя сохранится.',
+              'Уроки, звёзды и рекорды обнулятся. Имя сохранится.',
               [
                 { text: 'Отмена', style: 'cancel' },
                 {
@@ -263,173 +316,149 @@ export default function ParentScreen() {
               ],
             )
           }
-          style={({ pressed }) => [styles.danger, pressed && { opacity: 0.88 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Сбросить прогресс ребёнка"
+          style={({ pressed }) => [styles.danger, pressed && styles.pressed]}
         >
           <Text style={styles.dangerText}>Сбросить прогресс</Text>
         </Pressable>
 
-        <Link href="/dances" asChild>
-          <Pressable style={styles.linkBtn}>
-            <Text style={styles.linkText}>Открыть каталог танцев →</Text>
-          </Pressable>
-        </Link>
+        <Pressable
+          onPress={() => router.push('/dances')}
+          accessibilityRole="link"
+          accessibilityLabel="Открыть каталог танцев"
+          style={styles.linkBtn}
+        >
+          <Text style={type.link}>Открыть каталог танцев →</Text>
+        </Pressable>
       </ScrollView>
-    </StageBackground>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: spacing.lg,
   },
-  brand: {
-    fontFamily: fonts.brand,
-    fontSize: 34,
-    color: colors.cyan,
-  },
-  title: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 26,
-    color: colors.ink,
-    marginBottom: spacing.md,
-  },
   copy: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: spacing.sm,
     marginBottom: spacing.md,
+  },
+  title: {
+    flex: 1,
   },
   lockBtn: {
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 12,
+    borderRadius: radius.input,
     paddingHorizontal: 12,
     paddingVertical: 8,
-  },
-  lockText: {
-    fontFamily: fonts.bodyBold,
-    color: colors.ink,
+    backgroundColor: colors.panelSoft,
   },
   panel: {
     backgroundColor: colors.panel,
-    borderRadius: 18,
-    padding: spacing.lg,
+    borderRadius: radius.card,
+    padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.line,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
+    gap: spacing.xs,
   },
-  panelTitle: {
-    fontFamily: fonts.bodyExtra,
-    color: colors.ink,
-    fontSize: 16,
-    marginBottom: 8,
+  panelValue: {
+    marginBottom: 2,
   },
-  statLine: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 14,
-    marginBottom: 4,
+  panelNote: {
+    marginTop: spacing.xs,
   },
-  hint: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 12,
-    marginTop: 8,
-  },
-  barTrack: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.track,
-    marginTop: spacing.md,
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    backgroundColor: colors.mint,
+  inputLabel: {
+    marginTop: spacing.xs,
   },
   input: {
-    backgroundColor: colors.bg,
-    borderRadius: 12,
+    backgroundColor: colors.bgElevated,
+    borderRadius: radius.input,
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: colors.ink,
     fontFamily: fonts.bodyBold,
+    fontSize: 15,
+    lineHeight: 21,
     borderWidth: 1,
     borderColor: colors.line,
-    marginBottom: spacing.md,
   },
   primary: {
     backgroundColor: colors.coral,
-    borderRadius: 14,
-    paddingVertical: 12,
+    borderRadius: radius.input,
+    paddingVertical: 13,
     alignItems: 'center',
+    marginTop: spacing.sm,
   },
-  primaryText: {
-    fontFamily: fonts.bodyExtra,
-    color: colors.ink,
+  saved: {
+    ...type.caption,
+    color: colors.mint,
+    marginTop: spacing.xs,
   },
   section: {
-    fontFamily: fonts.brand,
-    fontSize: 22,
-    color: colors.ink,
-    marginBottom: 8,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    alignItems: 'center',
+    paddingVertical: 11,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
-  rowTitle: {
-    fontFamily: fonts.bodyBold,
-    color: colors.ink,
-  },
-  rowMeta: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-  },
   danger: {
     marginTop: spacing.lg,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    borderRadius: radius.input,
+    borderWidth: 1,
     borderColor: colors.coral,
-    paddingVertical: 12,
+    paddingVertical: 13,
     alignItems: 'center',
   },
   dangerText: {
     fontFamily: fonts.bodyExtra,
+    fontSize: 15,
+    lineHeight: 21,
     color: colors.coral,
   },
   linkBtn: {
     marginTop: spacing.md,
     alignItems: 'center',
   },
-  linkText: {
-    fontFamily: fonts.bodyBold,
-    color: colors.sky,
+  pressed: {
+    opacity: 0.88,
+  },
+  barTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.track,
+    marginTop: spacing.sm,
+    overflow: 'hidden',
+  },
+  barFill: {
+    height: '100%',
+    backgroundColor: colors.mint,
   },
   pinWrap: {
     alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  pinTitle: {
-    fontFamily: fonts.bodyExtra,
-    color: colors.ink,
-    fontSize: 20,
+    marginTop: spacing.sm,
   },
   pinSub: {
-    fontFamily: fonts.body,
-    color: colors.muted,
     textAlign: 'center',
-    marginVertical: 8,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
   },
   dots: {
     flexDirection: 'row',
@@ -456,7 +485,7 @@ const styles = StyleSheet.create({
   key: {
     width: 80,
     height: 56,
-    borderRadius: 14,
+    borderRadius: radius.input,
     backgroundColor: colors.panel,
     alignItems: 'center',
     justifyContent: 'center',
@@ -469,18 +498,19 @@ const styles = StyleSheet.create({
   },
   keyText: {
     fontFamily: fonts.bodyExtra,
-    color: colors.ink,
     fontSize: 22,
+    lineHeight: 28,
+    color: colors.ink,
   },
   pinCta: {
-    fontFamily: fonts.body,
-    color: colors.muted,
     marginTop: spacing.md,
   },
   error: {
     fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    lineHeight: 19,
     color: colors.coral,
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
 });

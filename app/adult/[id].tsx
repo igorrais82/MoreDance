@@ -7,7 +7,8 @@ import { LessonVideo } from '../../src/components/LessonVideo';
 import { StageBackground } from '../../src/components/StageBackground';
 import { Text } from '../../src/components/Text';
 import { getAdultVideo } from '../../src/data/adultGroup';
-import { colors, fonts, spacing } from '../../src/theme';
+import { colors, spacing, type } from '../../src/theme';
+import { goBack } from '../../src/lib/nav';
 
 export default function AdultVideoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -20,7 +21,7 @@ export default function AdultVideoScreen() {
       <StageBackground>
         <View style={[styles.fallback, { paddingTop: insets.top + spacing.lg }]}>
           <Text style={styles.title}>Видео не найдено</Text>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable onPress={() => goBack(router)} style={styles.backBtn}>
             <Text style={styles.back}>← К взрослой группе</Text>
           </Pressable>
         </View>
@@ -30,9 +31,9 @@ export default function AdultVideoScreen() {
 
   return (
     <StageBackground>
-      {/* Плеер не скроллится вместе с текстом - так видео не дёргается. */}
+      {/* Плеер не скроллится вместе с текстом — так видео не дёргается. */}
       <View style={[styles.stickyPlayer, { paddingTop: insets.top + spacing.sm }]}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={() => goBack(router)} style={styles.backBtn}>
           <Text style={styles.back}>← Взрослая группа</Text>
         </Pressable>
         <LessonVideo label={video.title} source={video.video} />
@@ -81,32 +82,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   back: {
-    fontFamily: fonts.bodyBold,
-    color: colors.sky,
-    fontSize: 15,
+    ...type.link,
   },
   style: {
-    fontFamily: fonts.brand,
-    fontSize: 18,
-    letterSpacing: 1,
-    color: colors.cyan,
+    ...type.label,
+    color: colors.sky,
+    marginBottom: spacing.xs,
   },
   title: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 26,
-    color: colors.ink,
-    marginBottom: 4,
+    ...type.screen,
+    marginBottom: spacing.xs,
   },
   dancers: {
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.muted,
+    ...type.caption,
     marginBottom: spacing.sm,
   },
   description: {
-    fontFamily: fonts.body,
-    fontSize: 15,
-    lineHeight: 23,
-    color: colors.ink,
+    ...type.body,
   },
 });

@@ -2,7 +2,7 @@
   "expo": {
     "name": "MoreDance",
     "slug": "MoreDance",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "moredance",
@@ -22,6 +22,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "package": "com.moredance.app",
+      "versionCode": 2,
       "permissions": [
         "android.permission.CAMERA"
       ],

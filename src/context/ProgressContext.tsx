@@ -10,6 +10,8 @@ import React, {
 } from 'react';
 
 import { allLessons, dances } from '../data/dances';
+import { dayKey, streakDays } from '../lib/day';
+import { rankFor, xpFor } from '../lib/dancer';
 
 const STORAGE_KEY = 'moredance.progress.v1';
 
@@ -18,9 +20,14 @@ type ProgressState = {
   practiceSeconds: number;
   stars: number;
   dancerName: string;
-  poseBestScores: Record<string, number>;
+  /**
+   * Рекорды удержания (секунды) по урокам: и «рама», и поза перед камерой.
+   * Оценок «на глаз» здесь нет специально — считается только реальное время.
+   */
   frameBestSeconds: Record<string, number>;
   cameraPracticeSeconds: number;
+  /** Практика по дням: «2026-11-03» → секунды. Нужна для дневной цели и серии. */
+  practiceByDay: Record<string, number>;
 };
 
 type ProgressContextValue = ProgressState & {
@@ -28,15 +35,21 @@ type ProgressContextValue = ProgressState & {
   completeLesson: (lessonId: string) => Promise<void>;
   addPracticeSeconds: (seconds: number) => Promise<void>;
   addCameraPracticeSeconds: (seconds: number) => Promise<void>;
-  recordPoseScore: (lessonId: string, score: number) => Promise<void>;
   recordFrameHold: (lessonId: string, seconds: number) => Promise<void>;
   setDancerName: (name: string) => Promise<void>;
   resetProgress: () => Promise<void>;
   isLessonComplete: (lessonId: string) => boolean;
   danceProgress: (danceId: string) => { done: number; total: number };
   totalLessons: number;
-  level: number;
-  averagePoseScore: number;
+  /** Практика за сегодня (по локальному календарю). */
+  todayPracticeSeconds: number;
+  /** Дней практики подряд. */
+  streakDays: number;
+  /** Суммарный опыт и звание — единая шкала прогресса на всех экранах. */
+  xp: number;
+  rank: ReturnType<typeof rankFor>;
+  /** Лучшее удержание в кадре среди всех уроков, секунды. */
+  bestHoldSeconds: number;
   nextLesson: {
     danceId: string;
     lessonId: string;
@@ -50,12 +63,15 @@ const defaultState: ProgressState = {
   practiceSeconds: 0,
   stars: 0,
   dancerName: 'Танцор',
-  poseBestScores: {},
   frameBestSeconds: {},
   cameraPracticeSeconds: 0,
+  practiceByDay: {},
 };
 
 const ProgressContext = createContext<ProgressContextValue | null>(null);
+
+/** Уроков в программе. Прогоны не считаются уроками — иначе «Пройдено N из M» не сходится. */
+const TOTAL_LESSONS = allLessons().filter((item) => !item.lesson.runthrough).length;
 
 export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<ProgressState>(defaultState);
@@ -69,12 +85,14 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw && !cancelled) {
-          const parsed = JSON.parse(raw);
+          const parsed = JSON.parse(raw) as Partial<ProgressState> & {
+            poseBestScores?: Record<string, number>;
+          };
           setState({
             ...defaultState,
             ...parsed,
-            poseBestScores: parsed.poseBestScores ?? {},
             frameBestSeconds: parsed.frameBestSeconds ?? {},
+            practiceByDay: parsed.practiceByDay ?? {},
           });
         }
       } catch {
@@ -97,6 +115,15 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  /** Практика пишется и в общий счётчик, и в календарь по дням. */
+  const addToDay = (prev: ProgressState, seconds: number) => {
+    const key = dayKey();
+    return {
+      ...prev.practiceByDay,
+      [key]: (prev.practiceByDay[key] ?? 0) + seconds,
+    };
+  };
+
   const completeLesson = useCallback(
     async (lessonId: string) => {
       commit((prev) => {
@@ -114,11 +141,13 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const addPracticeSeconds = useCallback(
     async (seconds: number) => {
       if (seconds <= 0) return;
-      const gained = Math.floor(seconds / 30);
+      // Звезда за каждые 30 секунд практики под метроном.
+      const stars = Math.floor(seconds / 30);
       commit((prev) => ({
         ...prev,
         practiceSeconds: prev.practiceSeconds + seconds,
-        stars: prev.stars + gained,
+        stars: prev.stars + stars,
+        practiceByDay: addToDay(prev, seconds),
       }));
     },
     [commit],
@@ -127,29 +156,14 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const addCameraPracticeSeconds = useCallback(
     async (seconds: number) => {
       if (seconds <= 0) return;
+      const stars = Math.floor(seconds / 25);
       commit((prev) => ({
         ...prev,
         cameraPracticeSeconds: prev.cameraPracticeSeconds + seconds,
         practiceSeconds: prev.practiceSeconds + seconds,
-        stars: prev.stars + Math.floor(seconds / 25),
+        stars: prev.stars + stars,
+        practiceByDay: addToDay(prev, seconds),
       }));
-    },
-    [commit],
-  );
-
-  const recordPoseScore = useCallback(
-    async (lessonId: string, score: number) => {
-      const clamped = Math.max(0, Math.min(100, Math.round(score)));
-      commit((prev) => {
-        const prevBest = prev.poseBestScores[lessonId] ?? 0;
-        if (clamped <= prevBest) return prev;
-        const bonus = clamped >= 80 ? 2 : clamped >= 60 ? 1 : 0;
-        return {
-          ...prev,
-          poseBestScores: { ...prev.poseBestScores, [lessonId]: clamped },
-          stars: prev.stars + bonus,
-        };
-      });
     },
     [commit],
   );
@@ -206,7 +220,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     (danceId: string) => {
       const dance = dances.find((d) => d.id === danceId);
       if (!dance) return { done: 0, total: 0 };
-      // Прогон - не урок: он не входит в счётчик прогресса.
+      // Прогон — не урок: он не входит в счётчик прогресса.
       const lessons = dance.lessons.filter((l) => !l.runthrough);
       const done = lessons.filter((l) =>
         state.completedLessons.includes(l.id),
@@ -216,14 +230,23 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     [state.completedLessons],
   );
 
-  const totalLessons = allLessons().length;
-  const level = Math.max(1, Math.floor(state.stars / 12) + 1);
+  const todayPracticeSeconds = state.practiceByDay[dayKey()] ?? 0;
+  const currentStreak = useMemo(
+    () => streakDays(state.practiceByDay),
+    [state.practiceByDay],
+  );
 
-  const averagePoseScore = useMemo(() => {
-    const values = Object.values(state.poseBestScores);
-    if (!values.length) return 0;
-    return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
-  }, [state.poseBestScores]);
+  const xp = xpFor({
+    lessons: state.completedLessons.length,
+    practiceMinutes: Math.floor(state.practiceSeconds / 60),
+    stars: state.stars,
+  });
+  const rank = useMemo(() => rankFor(xp), [xp]);
+
+  const bestHoldSeconds = useMemo(
+    () => Math.max(0, ...Object.values(state.frameBestSeconds)),
+    [state.frameBestSeconds],
+  );
 
   const nextLesson = useMemo(() => {
     for (const dance of dances) {
@@ -249,15 +272,17 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       completeLesson,
       addPracticeSeconds,
       addCameraPracticeSeconds,
-      recordPoseScore,
       recordFrameHold,
       setDancerName,
       resetProgress,
       isLessonComplete,
       danceProgress,
-      totalLessons,
-      level,
-      averagePoseScore,
+      totalLessons: TOTAL_LESSONS,
+      todayPracticeSeconds,
+      streakDays: currentStreak,
+      xp,
+      rank,
+      bestHoldSeconds,
       nextLesson,
     }),
     [
@@ -266,15 +291,16 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
       completeLesson,
       addPracticeSeconds,
       addCameraPracticeSeconds,
-      recordPoseScore,
       recordFrameHold,
       setDancerName,
       resetProgress,
       isLessonComplete,
       danceProgress,
-      totalLessons,
-      level,
-      averagePoseScore,
+      todayPracticeSeconds,
+      currentStreak,
+      xp,
+      rank,
+      bestHoldSeconds,
       nextLesson,
     ],
   );

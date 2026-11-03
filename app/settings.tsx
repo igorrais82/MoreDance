@@ -11,21 +11,24 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Chip } from '../src/components/Chip';
+import { ScreenHeader } from '../src/components/ScreenHeader';
 import { StageBackground } from '../src/components/StageBackground';
 import { Text as AppText } from '../src/components/Text';
+import { TabGlyph } from '../src/components/icons';
 import {
   FONT_OPTIONS,
   FONT_SCALES,
   FontKey,
   FontSizeKey,
   PALETTE_PRESETS,
-  TAB_KEYS,
   TAB_META,
   TabKey,
   isTabLocked,
   useSettings,
 } from '../src/context/SettingsContext';
-import { colors, fonts, spacing } from '../src/theme';
+import { colors, fonts, radius, spacing, type } from '../src/theme';
+import { goBack } from '../src/lib/nav';
 
 const ROW_HEIGHT = 62;
 
@@ -56,6 +59,8 @@ export default function SettingsScreen() {
   const [editing, setEditing] = useState<TabKey>('dances');
   const [dragging, setDragging] = useState(false);
 
+  const editingAccent = palettes[editing]?.from ?? colors.cyan;
+
   const move = (from: number, to: number) => {
     const next = [...tabOrder];
     const [item] = next.splice(from, 1);
@@ -73,124 +78,125 @@ export default function SettingsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.headerRow}>
-          <Pressable onPress={() => router.back()} hitSlop={10}>
-            <AppText style={styles.back}>← Назад</AppText>
-          </Pressable>
-        </View>
-
-        <AppText style={styles.title}>Настройки</AppText>
-        <AppText style={styles.copy}>
-          Цвета, шрифт и порядок вкладок. Всё сохраняется на этом устройстве.
-        </AppText>
+        <ScreenHeader
+          backLabel="Назад"
+          onBack={() => goBack(router)}
+          title="Настройки"
+          subtitle="Цвета, шрифт и порядок вкладок. Всё сохраняется на этом устройстве."
+        />
 
         {/* Цвета вкладок */}
-        <AppText style={styles.section}>Цвета вкладок</AppText>
-        <View style={styles.chips}>
+        <AppText style={[type.section, styles.section]}>Цвета вкладок</AppText>
+        <View style={styles.wrapRow}>
           {tabOrder.map((key) => {
             const active = key === editing;
             const palette = palettes[key];
             return (
-              <Pressable
+              <Chip
                 key={key}
+                label={TAB_META[key].title}
+                active={active}
                 onPress={() => {
                   setEditing(key);
                   setActiveTab(key);
                 }}
-                style={[styles.chip, active && styles.chipActive]}
+                accent={palette.from}
+                leading={
+                  <View
+                    style={[
+                      styles.chipDot,
+                      { backgroundColor: palette.from, borderColor: palette.to },
+                    ]}
+                  />
+                }
+              />
+            );
+          })}
+        </View>
+
+        <View style={styles.swatches}>
+          {PALETTE_PRESETS.map((preset) => {
+            const selected =
+              palettes[editing].from === preset.gradient.from &&
+              palettes[editing].to === preset.gradient.to;
+            return (
+              <Pressable
+                key={preset.name}
+                onPress={() => setTabPalette(editing, preset.gradient)}
+                accessibilityRole="button"
+                accessibilityLabel={`Палитра ${preset.name}`}
+                accessibilityState={{ selected }}
+                style={styles.swatch}
               >
                 <View
                   style={[
-                    styles.chipDot,
-                    { backgroundColor: palette.from, borderColor: palette.to },
+                    styles.swatchPreview,
+                    selected && { borderColor: colors.ink },
                   ]}
-                />
-                <AppText style={[styles.chipText, active && styles.chipTextActive]}>
-                  {TAB_META[key].title}
+                >
+                  <View
+                    style={[
+                      styles.swatchHalf,
+                      { backgroundColor: preset.gradient.from },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.swatchHalf,
+                      { backgroundColor: preset.gradient.to },
+                    ]}
+                  />
+                </View>
+                <AppText
+                  style={[type.caption, selected && styles.swatchNameActive]}
+                  numberOfLines={1}
+                >
+                  {preset.name}
                 </AppText>
               </Pressable>
             );
           })}
         </View>
 
-        <View style={styles.swatches}>
-          {PALETTE_PRESETS.map((preset) => (
-            <Pressable
-              key={preset.name}
-              onPress={() => setTabPalette(editing, preset.gradient)}
-              style={styles.swatch}
-            >
-              <View
-                style={[
-                  styles.swatchPreview,
-                  {
-                    borderColor:
-                      palettes[editing].from === preset.gradient.from &&
-                      palettes[editing].to === preset.gradient.to
-                        ? colors.ink
-                        : 'transparent',
-                  },
-                ]}
-              >
-                <View
-                  style={[styles.swatchHalf, { backgroundColor: preset.gradient.from }]}
-                />
-                <View
-                  style={[styles.swatchHalf, { backgroundColor: preset.gradient.to }]}
-                />
-              </View>
-              <AppText style={styles.swatchName}>{preset.name}</AppText>
-            </Pressable>
+        {/* Шрифт */}
+        <AppText style={[type.section, styles.section]}>Шрифт</AppText>
+        <AppText style={[type.small, styles.hint]}>
+          Каждый вариант показан своим шрифтом — выбери тот, что легче читается.
+        </AppText>
+        {FONT_OPTIONS.map((option) => (
+          <FontRow
+            key={option.key}
+            option={option}
+            active={fontKey === option.key}
+            onPress={() => setFontKey(option.key as FontKey)}
+          />
+        ))}
+
+        <View style={styles.sizeRow}>
+          {FONT_SCALES.map((option) => (
+            <Chip
+              key={option.key}
+              label={option.name}
+              active={fontSizeKey === option.key}
+              onPress={() => setFontSizeKey(option.key as FontSizeKey)}
+              accent={editingAccent}
+            />
           ))}
         </View>
 
-        {/* Шрифт */}
-        <AppText style={styles.section}>Шрифт</AppText>
-        <View style={styles.rowWrap}>
-          {FONT_OPTIONS.map((option) => (
-            <Pressable
-              key={option.key}
-              onPress={() => setFontKey(option.key as FontKey)}
-              style={[styles.pill, fontKey === option.key && styles.pillActive]}
-            >
-              <AppText
-                style={[styles.pillText, fontKey === option.key && styles.pillTextActive]}
-              >
-                {option.name}
-              </AppText>
-            </Pressable>
-          ))}
-        </View>
-        <View style={styles.rowWrap}>
-          {FONT_SCALES.map((option) => (
-            <Pressable
-              key={option.key}
-              onPress={() => setFontSizeKey(option.key as FontSizeKey)}
-              style={[styles.pill, fontSizeKey === option.key && styles.pillActive]}
-            >
-              <AppText
-                style={[
-                  styles.pillText,
-                  fontSizeKey === option.key && styles.pillTextActive,
-                ]}
-              >
-                {option.name}
-              </AppText>
-            </Pressable>
-          ))}
-        </View>
         <View style={styles.preview}>
-          <AppText style={styles.previewTitle}>Медленный вальс</AppText>
+          <AppText style={styles.previewDisplay}>Медленный вальс</AppText>
+          <AppText style={styles.previewTitle}>Счёт: раз, два, три</AppText>
           <AppText style={styles.previewBody}>
             Так выглядит текст на выбранном шрифте и размере.
           </AppText>
         </View>
 
         {/* Порядок вкладок */}
-        <AppText style={styles.section}>Нижняя панель</AppText>
-        <AppText style={styles.hint}>
-          Держите значок ≡ и тяните строку вверх или вниз. Переключатель убирает
-          вкладку с панели. Вкладку «Сцена» убрать нельзя - это главный экран
+        <AppText style={[type.section, styles.section]}>Нижняя панель</AppText>
+        <AppText style={[type.small, styles.hint]}>
+          Держи значок ≡ и тяни строку вверх или вниз. Переключатель убирает
+          вкладку с панели. Вкладку «Сцена» убрать нельзя — это главный экран
           приложения.
         </AppText>
         {tabOrder.map((key, index) => (
@@ -209,7 +215,7 @@ export default function SettingsScreen() {
         ))}
 
         {/* Звук и анимации */}
-        <AppText style={styles.section}>Звук и анимации</AppText>
+        <AppText style={[type.section, styles.section]}>Звук и анимации</AppText>
         <ToggleRow
           title="Звук метронома"
           value={soundEnabled}
@@ -231,6 +237,46 @@ export default function SettingsScreen() {
         </Pressable>
       </ScrollView>
     </StageBackground>
+  );
+}
+
+/** Строка выбора шрифта: название набрано самим вариантом. */
+function FontRow({
+  option,
+  active,
+  onPress,
+}: {
+  option: { key: string; name: string; hint: string };
+  active: boolean;
+  onPress: () => void;
+}) {
+  const key = option.key as FontKey;
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      style={({ pressed }) => [
+        styles.fontRow,
+        active && styles.fontRowActive,
+        pressed && styles.pressed,
+      ]}
+    >
+      <View style={styles.fontSample}>
+        <AppText fontOverride={key} style={styles.fontSampleGlyph}>
+          Аа
+        </AppText>
+      </View>
+      <View style={styles.fontText}>
+        <AppText fontOverride={key} style={styles.fontName}>
+          {option.name}
+        </AppText>
+        <AppText style={type.caption}>{option.hint}</AppText>
+      </View>
+      <View style={[styles.radio, active && styles.radioActive]}>
+        {active ? <View style={styles.radioDot} /> : null}
+      </View>
+    </Pressable>
   );
 }
 
@@ -299,13 +345,21 @@ function OrderRow({
       <View {...responder.panHandlers} style={styles.dragHandle}>
         <AppText style={styles.dragGlyph}>≡</AppText>
       </View>
-      <AppText style={styles.orderIcon}>{TAB_META[tab].icon}</AppText>
-      <AppText style={[styles.orderTitle, hidden && styles.orderTitleHidden]}>
+      <View style={styles.orderIcon}>
+        <TabGlyph icon={TAB_META[tab].icon} size={20} color={colors.muted} />
+      </View>
+      <AppText
+        style={[
+          type.strong,
+          styles.orderTitle,
+          hidden && styles.orderTitleHidden,
+        ]}
+      >
         {TAB_META[tab].title}
       </AppText>
       {locked ? (
         <View style={styles.lockBadge}>
-          <AppText style={styles.lockBadgeText}>всегда на панели</AppText>
+          <AppText style={styles.lockBadgeText}>на панели</AppText>
         </View>
       ) : (
         <Switch
@@ -329,8 +383,8 @@ function ToggleRow({
   onChange: (value: boolean) => void;
 }) {
   return (
-    <View style={styles.toggleRow}>
-      <AppText style={styles.toggleTitle}>{title}</AppText>
+    <View style={styles.orderRow}>
+      <AppText style={[type.strong, styles.orderTitle]}>{title}</AppText>
       <Switch
         value={value}
         onValueChange={onChange}
@@ -345,92 +399,39 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.lg,
   },
-  headerRow: {
-    flexDirection: 'row',
-    marginBottom: spacing.sm,
-  },
-  back: {
-    fontFamily: fonts.bodyBold,
-    color: colors.sky,
-    fontSize: 15,
-  },
-  title: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 28,
-    color: colors.ink,
-  },
-  copy: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 14,
-    lineHeight: 21,
-    marginTop: 6,
-    marginBottom: spacing.md,
-  },
   section: {
-    fontFamily: fonts.brand,
-    fontSize: 22,
-    color: colors.ink,
-    letterSpacing: 0.5,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
   hint: {
-    fontFamily: fonts.body,
-    color: colors.muted,
-    fontSize: 13,
-    lineHeight: 19,
     marginBottom: spacing.sm,
   },
-  chips: {
+  wrapRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.panelSoft,
-  },
-  chipActive: {
-    borderColor: colors.cyan,
-    backgroundColor: 'rgba(0,245,255,0.12)',
+    gap: spacing.xs + 2,
   },
   chipDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     borderWidth: 2,
-  },
-  chipText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    color: colors.muted,
-  },
-  chipTextActive: {
-    color: colors.ink,
   },
   swatches: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: spacing.sm,
     marginTop: spacing.md,
   },
   swatch: {
     alignItems: 'center',
-    gap: 6,
-    width: 72,
+    gap: spacing.xs,
+    width: 68,
   },
   swatchPreview: {
-    width: 72,
-    height: 44,
-    borderRadius: 12,
+    width: 68,
+    height: 42,
+    borderRadius: radius.input,
     overflow: 'hidden',
     flexDirection: 'row',
     borderWidth: 2,
@@ -439,130 +440,162 @@ const styles = StyleSheet.create({
   swatchHalf: {
     flex: 1,
   },
-  swatchName: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    color: colors.muted,
-  },
-  rowWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: spacing.sm,
-  },
-  pill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.panelSoft,
-  },
-  pillActive: {
-    borderColor: colors.cyan,
-    backgroundColor: 'rgba(0,245,255,0.14)',
-  },
-  pillText: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
-    color: colors.muted,
-  },
-  pillTextActive: {
+  swatchNameActive: {
     color: colors.ink,
   },
+  fontRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 68,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.panel,
+    marginBottom: spacing.xs + 2,
+  },
+  fontRowActive: {
+    borderColor: colors.ink,
+  },
+  pressed: {
+    opacity: 0.88,
+  },
+  fontSample: {
+    width: 46,
+    height: 46,
+    borderRadius: radius.input,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.panelSoft,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  fontSampleGlyph: {
+    fontFamily: fonts.brand,
+    fontSize: 22,
+    lineHeight: 28,
+    color: colors.ink,
+  },
+  fontText: {
+    flex: 1,
+    gap: 1,
+  },
+  fontName: {
+    fontFamily: fonts.bodyExtra,
+    fontSize: 15,
+    lineHeight: 21,
+    color: colors.ink,
+  },
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.lineStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioActive: {
+    borderColor: colors.ink,
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.ink,
+  },
+  sizeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs + 2,
+    marginTop: spacing.sm,
+  },
   preview: {
-    borderRadius: 18,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.panel,
     padding: spacing.md,
-    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    gap: spacing.xs,
+  },
+  previewDisplay: {
+    fontFamily: fonts.brand,
+    fontSize: 26,
+    lineHeight: 32,
+    letterSpacing: 0.6,
+    color: colors.ink,
   },
   previewTitle: {
     fontFamily: fonts.bodyExtra,
-    fontSize: 20,
+    fontSize: 17,
+    lineHeight: 23,
     color: colors.ink,
-    marginBottom: 4,
   },
   previewBody: {
     fontFamily: fonts.body,
     fontSize: 14,
+    lineHeight: 21,
     color: colors.muted,
   },
   orderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    minHeight: ROW_HEIGHT - 12,
+    gap: spacing.sm,
+    minHeight: ROW_HEIGHT - 8,
     paddingHorizontal: spacing.md,
-    borderRadius: 16,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.panel,
     marginBottom: 8,
   },
   orderRowActive: {
-    borderColor: colors.cyan,
+    borderColor: colors.ink,
     zIndex: 10,
     elevation: 6,
-    transform: [{ scale: 1.02 }],
   },
   dragHandle: {
-    paddingVertical: 10,
-    paddingRight: 4,
+    paddingVertical: spacing.sm,
+    paddingRight: 2,
   },
   dragGlyph: {
-    fontSize: 20,
+    fontSize: 18,
+    lineHeight: 22,
     color: colors.muted,
   },
   orderIcon: {
-    fontSize: 16,
-    color: colors.muted,
+    width: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   orderTitle: {
     flex: 1,
-    fontFamily: fonts.bodyBold,
-    fontSize: 15,
-    color: colors.ink,
   },
   orderTitleHidden: {
     color: colors.muted,
     textDecorationLine: 'line-through',
   },
   lockBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(0,245,255,0.35)',
-    backgroundColor: 'rgba(0,245,255,0.10)',
+    borderColor: colors.line,
   },
   lockBadgeText: {
     fontFamily: fonts.bodyBold,
     fontSize: 11,
-    color: colors.sky,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: spacing.md,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.panel,
-    marginBottom: 8,
-  },
-  toggleTitle: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 15,
-    color: colors.ink,
+    lineHeight: 15,
+    color: colors.muted,
   },
   reset: {
     marginTop: spacing.lg,
     paddingVertical: 14,
-    borderRadius: 16,
+    borderRadius: radius.input,
     borderWidth: 1,
     borderColor: colors.coral,
     alignItems: 'center',
@@ -570,6 +603,7 @@ const styles = StyleSheet.create({
   resetText: {
     fontFamily: fonts.bodyBold,
     fontSize: 15,
+    lineHeight: 21,
     color: colors.coral,
   },
 });

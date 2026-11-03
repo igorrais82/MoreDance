@@ -13,7 +13,8 @@ import { StageBackground } from '../../../src/components/StageBackground';
 import { Text } from '../../../src/components/Text';
 import { useProgress } from '../../../src/context/ProgressContext';
 import { getLesson } from '../../../src/data/dances';
-import { colors, fonts, spacing } from '../../../src/theme';
+import { colors, fonts, radius, spacing, type } from '../../../src/theme';
+import { goBack } from '../../../src/lib/nav';
 
 export default function PracticeScreen() {
   const { danceId, lessonId } = useLocalSearchParams<{
@@ -58,7 +59,7 @@ export default function PracticeScreen() {
     return () => clearInterval(id);
   }, [running]);
 
-  // Flush only on leave - never when progress callbacks change identity
+  // Flush only on leave — never when progress callbacks change identity
   useEffect(() => {
     return () => {
       flushPractice();
@@ -75,7 +76,7 @@ export default function PracticeScreen() {
       <StageBackground>
         <View style={{ paddingTop: insets.top + 24, paddingHorizontal: 24 }}>
           <Text style={styles.title}>Практика недоступна</Text>
-          <Pressable onPress={() => router.back()}>
+          <Pressable onPress={() => goBack(router)}>
             <Text style={styles.back}>Назад</Text>
           </Pressable>
         </View>
@@ -86,6 +87,10 @@ export default function PracticeScreen() {
   const { dance, lesson } = data;
   const step = lesson.steps[stepIndex % lesson.steps.length];
   const done = isLessonComplete(lesson.id);
+  /** Сколько нужно реально потренироваться, чтобы урок считался пройденным. */
+  const MIN_PRACTICE_SECONDS = 15;
+  const canFinish = elapsed >= MIN_PRACTICE_SECONDS;
+  const secondsLeft = Math.max(0, MIN_PRACTICE_SECONDS - elapsed);
 
   const onCueStepLayout = (height: number) => {
     setCueMinHeight((prev) => (height > prev ? height : prev));
@@ -105,6 +110,7 @@ export default function PracticeScreen() {
   };
 
   const finishLesson = async () => {
+    if (!canFinish) return;
     if (running) {
       if (startedAt.current != null) {
         accrued.current += Math.floor((Date.now() - startedAt.current) / 1000);
@@ -128,12 +134,17 @@ export default function PracticeScreen() {
           styles.screen,
           {
             paddingTop: insets.top + spacing.md,
-            paddingBottom: insets.bottom + spacing.md,
+            paddingBottom: insets.bottom + spacing.lg,
           },
         ]}
       >
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Pressable
+            onPress={() => goBack(router)}
+            style={styles.backBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Назад к уроку"
+          >
             <Text style={styles.back}>← К уроку</Text>
           </Pressable>
           <Text style={[styles.en, { color: dance.accent }]}>{dance.nameEn}</Text>
@@ -191,29 +202,49 @@ export default function PracticeScreen() {
           </View>
         </ScrollView>
 
-        {/* Always pinned above the home indicator - never pushed off-screen */}
+        {/* Always pinned above the home indicator — never pushed off-screen */}
         <View style={styles.footer}>
           <Pressable
             onPress={() =>
               setStepIndex((i) => (i + 1) % lesson.steps.length)
             }
+            accessibilityRole="button"
+            accessibilityLabel="Следующий шаг урока"
             style={({ pressed }) => [styles.ghostBtn, pressed && { opacity: 0.85 }]}
           >
             <Text style={styles.ghostText}>Следующий шаг</Text>
           </Pressable>
           <Pressable
             onPress={finishLesson}
-            disabled={done}
+            disabled={done || !canFinish}
+            accessibilityRole="button"
+            accessibilityLabel={
+              done
+                ? 'Урок выполнен'
+                : canFinish
+                  ? 'Завершить урок'
+                  : `Завершить урок можно через ${secondsLeft} секунд практики`
+            }
             style={({ pressed }) => [
               styles.doneBtn,
-              done && { backgroundColor: colors.mint },
-              pressed && !done && { opacity: 0.88 },
+              !canFinish && !done && styles.doneBtnDisabled,
+              pressed && canFinish && !done && styles.pressed,
             ]}
           >
-            <Text style={styles.doneText}>
-              {done ? 'Урок выполнен' : 'Завершить урок'}
+            <Text style={[styles.doneText, !canFinish && !done && styles.doneTextDisabled]}>
+              {done
+                ? 'Урок выполнен'
+                : canFinish
+                  ? 'Завершить урок'
+                  : `Потренируйся ещё ${secondsLeft} с`}
             </Text>
           </Pressable>
+          {!done && !canFinish ? (
+            <Text style={styles.footerHint}>
+              Урок засчитывается после {MIN_PRACTICE_SECONDS} секунд практики —
+              запусти счёт.
+            </Text>
+          ) : null}
         </View>
       </View>
     </StageBackground>
@@ -233,23 +264,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   back: {
-    fontFamily: fonts.bodyBold,
-    color: colors.muted,
-    fontSize: 15,
+    ...type.link,
   },
   en: {
     fontFamily: fonts.brand,
-    fontSize: 18,
+    fontSize: 17,
+    lineHeight: 22,
     letterSpacing: 1,
   },
   title: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 26,
-    color: colors.ink,
+    ...type.screen,
   },
   timer: {
-    fontFamily: fonts.brand,
-    fontSize: 34,
+    ...type.timer,
     color: colors.gold,
     marginTop: 2,
   },
@@ -266,7 +293,7 @@ const styles = StyleSheet.create({
   },
   cue: {
     backgroundColor: colors.panel,
-    borderRadius: 22,
+    borderRadius: radius.tile,
     borderWidth: 1,
     borderColor: colors.line,
     overflow: 'hidden',
@@ -274,8 +301,7 @@ const styles = StyleSheet.create({
   },
   cueInner: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+    paddingVertical: spacing.md,
   },
   cueMeasureLayer: {
     position: 'absolute',
@@ -285,21 +311,19 @@ const styles = StyleSheet.create({
   },
   cueCount: {
     fontFamily: fonts.brand,
-    fontSize: 22,
+    fontSize: 20,
+    lineHeight: 26,
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   cueTitle: {
-    fontFamily: fonts.bodyExtra,
-    fontSize: 20,
-    color: colors.ink,
-    marginBottom: 8,
+    ...type.cardTitle,
+    fontSize: 19,
+    lineHeight: 25,
+    marginBottom: spacing.xs,
   },
   cueInstruction: {
-    fontFamily: fonts.body,
-    fontSize: 16,
-    color: colors.muted,
-    lineHeight: 24,
+    ...type.body,
   },
   footer: {
     gap: 10,
@@ -309,26 +333,41 @@ const styles = StyleSheet.create({
     borderTopColor: colors.line,
   },
   ghostBtn: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 14,
+    borderRadius: radius.input,
     paddingVertical: 12,
     alignItems: 'center',
+    backgroundColor: colors.panelSoft,
   },
   ghostText: {
-    fontFamily: fonts.bodyBold,
-    color: colors.ink,
-    fontSize: 15,
+    ...type.strong,
   },
   doneBtn: {
-    backgroundColor: colors.coral,
-    borderRadius: 14,
+    backgroundColor: colors.mint,
+    borderRadius: radius.input,
     paddingVertical: 14,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.mint,
+  },
+  doneBtnDisabled: {
+    backgroundColor: colors.panelSoft,
+    borderColor: colors.line,
   },
   doneText: {
-    fontFamily: fonts.bodyExtra,
-    color: colors.ink,
-    fontSize: 16,
+    ...type.button,
+    color: colors.bg,
+  },
+  doneTextDisabled: {
+    color: colors.muted,
+  },
+  footerHint: {
+    ...type.caption,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  pressed: {
+    opacity: 0.88,
   },
 });
